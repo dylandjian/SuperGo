@@ -1,17 +1,12 @@
 from board.gym import make
 import numpy as np
+from const import *
+
+
 
 ## Setup env for 9x9 Go board
 env = make('Go9x9-v0')
 env.reset()
-
-
-## Number of last states to keep
-HISTORY = 7
-GOBAN_SIZE = 9
-
-
-## BLACK = 0 WHITE = 1
 
 
 def state_history(history, new_state, color):
@@ -20,7 +15,8 @@ def state_history(history, new_state, color):
     return history
 
 
-def create_state(history, board):
+def create_state(history, color, board):
+    last_layer = np.full(GOBAN_SIZE ** 2, color)
     print(board)
 
 
@@ -29,7 +25,8 @@ done = False
 history = np.zeros((2, HISTORY, GOBAN_SIZE ** 2))
 
 
-while done is False:
-    print("la valeur du joueur est : %d\n" % (int(env.player_color) - 1))
-    env.render()
-    break
+for epoch in range(1, EPOCHS):
+    while done is False:
+        print("la valeur du joueur est : %d\n" % (int(env.player_color) - 1))
+        env.render()
+        break
