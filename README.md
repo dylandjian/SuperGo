@@ -1,2 +1,2 @@
-# BetaGo
-A student attempt at recreating AlphaGo Zero, learning from selfplay
+# GammaGo
+A student implementation of Alpha Go Zero
