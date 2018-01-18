@@ -2,6 +2,38 @@ import torch
 import torch.nn
 
 
+class BasicBlock(nn.Module):
+    """
+    Basic residual block with 2 convolutions and a skip connection before the last
+    ReLU activation.
+    """ 
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(BasicBlock, self).__init__()
+        
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = F.relu(self.bn1(out))
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        out += residual
+        out = F.relu(out)
+
+        return out
+
+
 class FeatureExtractor(nn.Module):
 
     """
@@ -24,9 +56,27 @@ class FeatureExtractor(nn.Module):
     make. 
     """
 
-    def __init__(self, state, ):
+    def __init__(self):
         super(FeatureExtractor, self).__init__()
+        self.res1 = BasicBlock(20, 10)
+        self.res2 = BasicBlock(10, 10)
+        self.res3 = BasicBlock(10, 10)
     
-
     def forward(x):
-        return x
+        """
+        x : tensor representing the state
+        feature_maps : result of the residual layers
+        """
+
+        x = self.res1(x)
+        x = self.res2(x)
+        feature_maps = self.res3(x)
+        return feature_maps
+
+
+
+
+
+
+
+

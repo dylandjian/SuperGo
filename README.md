@@ -1,2 +1,4 @@
 # GammaGo
-A student implementation of Alpha Go Zero
+A student implementation of AlphaGo Zero paper with documentation.
+
+Using OpenAI Gym
