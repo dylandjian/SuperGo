@@ -1,14 +1,18 @@
+import torch
+
+CUDA = torch.cuda.is_available()
+
 ##### GLOBAL
 
 ## Size of the Go board
-GOBAN_SIZE = 9
+GOBAN_SIZE = 7
 ## Number of last states to keep
 HISTORY = 7
 ## Learning rate
 LR = 1e-2
 ## Number of epochs
 EPOCHS = 100
-## Number of MCTS iteration
+## Number of MCTS simulation
 MCTS_LOOK = 20
 
 #####
@@ -30,6 +34,8 @@ MINIBATCH = 64
 MOVES = 5000
 ## Number of mini-batch before evaluation during training
 TRAIN_EXAMPLE = 32 
+## Number of channels of the output feature maps
+OUTPLANES_MAP = 10
 
 #####
 

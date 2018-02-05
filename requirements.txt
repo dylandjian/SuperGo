@@ -1,2 +1,4 @@
 click
-./board
+six
+numpy
+pachi_py

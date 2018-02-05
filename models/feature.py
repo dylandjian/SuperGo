@@ -1,5 +1,6 @@
-import torch
-import torch.nn
+import torch.nn as nn
+import torch.nn.functional as F
+from const import HISTORY
 
 
 class BasicBlock(nn.Module):
@@ -11,7 +12,7 @@ class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
         
-        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride,
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
 
@@ -56,18 +57,23 @@ class FeatureExtractor(nn.Module):
     make. 
     """
 
-    def __init__(self):
+    def __init__(self, inplanes, outplanes):
         super(FeatureExtractor, self).__init__()
-        self.res1 = BasicBlock(20, 10)
-        self.res2 = BasicBlock(10, 10)
-        self.res3 = BasicBlock(10, 10)
+        self.conv1 = nn.Conv2d(inplanes, outplanes, stride=1, kernel_size=3,
+                        padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(outplanes)
+
+        self.res1 = BasicBlock(outplanes, outplanes)
+        self.res2 = BasicBlock(outplanes, outplanes)
+        self.res3 = BasicBlock(outplanes, outplanes)
     
-    def forward(x):
+    def forward(self, x):
         """
         x : tensor representing the state
         feature_maps : result of the residual layers
         """
 
+        x = F.relu(self.bn1(self.conv1(x)))
         x = self.res1(x)
         x = self.res2(x)
         feature_maps = self.res3(x)

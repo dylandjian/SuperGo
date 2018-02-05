@@ -1,5 +1,4 @@
-import torch
-import torch.nn.functional as F
+import torch.nn as nn
 
 
 class ValueNet(nn.Module):
@@ -10,11 +9,11 @@ class ValueNet(nn.Module):
     The output is a continuous variable, between -1 and 1. 
     """
 
-    def __init__(self):
+    def __init__(self, inplanes):
         super(ValueNet, self).__init__()
-        self.conv = nn.Conv2d(128, 4, kernel_size=1)
-        self.conv_bn = nn.BatchNorm2d(4)
-        self.fc1 = nn.Linear(4, 256)
+        self.conv = nn.Conv2d(inplanes, 2, kernel_size=1)
+        self.conv_bn = nn.BatchNorm2d(2)
+        self.fc1 = nn.Linear(2, 256)
         self.fc2 = nn.Linear(256, 1)
         
 

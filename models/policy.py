@@ -1,5 +1,5 @@
-import torch
-import torch.nn
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 class PolicyNet(nn.Module):
@@ -8,14 +8,14 @@ class PolicyNet(nn.Module):
     given the same 'state' described in the Feature Extractor model.
     """
 
-    def __init__(self):
+    def __init__(self, inplanes, outplanes):
         super(PolicyNet, self).__init__()
-        self.conv = nn.Conv2d(128, 4, kernel_size=1)
-        self.conv_bn = nn.BatchNorm2d(4)
-        self.fc = nn.Linear(4, BOARD_SIZE ** 2 + 1)
+        self.conv = nn.Conv2d(inplanes, 1, kernel_size=1)
+        self.bn = nn.BatchNorm2d(1)
+        self.fc = nn.Linear(outplanes - 1, outplanes)
         
 
-    def forward(x):
+    def forward(self, x):
         """
         x : feature maps extracted from the state
         probas : a NxN + 1 matrix where N is the board size
@@ -23,6 +23,7 @@ class PolicyNet(nn.Module):
                  of winning by playing this intersection
         """
  
-        x = F.relu(self.conv_bn(self.conv(x)))
-        probas = F.log_softmax(self.fc(x))
+        x = F.relu(self.bn(self.conv(x)))
+        x = x.view(-1)
+        probas = F.log_softmax(self.fc(x), dim=0)
         return probas
