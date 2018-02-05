@@ -56,13 +56,12 @@ def create_dataset(player, opponent, feature_extractor, board):
             feature_maps = feature_extractor(x)
 
             move = player.look_ahead(feature_maps)
-            print(move, type(move))
             state, reward, done = board.step(move)
             # debug(board, state, reward, done)
 
-            move = player.look_ahead(feature_maps)
-            print(move, type(move))
-            state, reward, done = board.step(move)
+            # move = player.look_ahead(feature_maps)
+            # print(move, type(move))
+            # state, reward, done = board.step(move)
 
 
 
@@ -80,7 +79,7 @@ def main(human):
     ## Init the 2 players
     player = agent.SuperAgent(OUTPLANES_MAP, outplanes)
     opponent = agent.SuperAgent(OUTPLANES_MAP, outplanes)
-    feature_extractor = feature.FeatureExtractor(inplanes, OUTPLANES_MAP).cuda()
+    feature_extractor = feature.FeatureExtractor(inplanes, OUTPLANES_MAP)
 
     dataset = create_dataset(player, opponent, feature_extractor, board)
         
