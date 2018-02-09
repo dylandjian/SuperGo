@@ -1,6 +1,14 @@
 import torch
 
+##### CONFIG
+
+## CUDA variable from Torch
 CUDA = torch.cuda.is_available()
+## Number of threads, used for parallel matching atm
+THREADS = 50
+
+#####
+
 
 ##### GLOBAL
 

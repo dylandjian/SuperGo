@@ -35,7 +35,7 @@ class BasicBlock(nn.Module):
         return out
 
 
-class FeatureExtractor(nn.Module):
+class Extractor(nn.Module):
 
     """
     This network is used as a feature extractor, takes as input the 'state' defined in
@@ -58,7 +58,7 @@ class FeatureExtractor(nn.Module):
     """
 
     def __init__(self, inplanes, outplanes):
-        super(FeatureExtractor, self).__init__()
+        super(Extractor, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, outplanes, stride=1, kernel_size=3,
                         padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(outplanes)

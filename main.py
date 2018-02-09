@@ -6,6 +6,45 @@ from const import *
 import click
 import timeit
 from models import agent, feature
+import threading
+from queue import Queue
+
+
+
+class GameThread(threading.Thread):
+    """ A single thread that is used to play a game """
+
+    def __init__(self, threadID, name, player, opponent, extractor):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.name = name
+        self.extractor = extractor
+        self.board = create_board()
+        self.player = player
+        self.opponent = opponent
+    
+    def run(self):
+        """
+        Make a game between the player and the opponent and return all the states
+        and the associated probabilities of each move. Also returns the winner in
+        order to create the training dataset
+        """
+
+        done = False
+        state = self.board.reset()
+
+        while not done:
+            x = prepare_state(state)
+            feature_maps = self.extractor(x)
+
+            move = self.player.look_ahead(feature_maps)
+            state, reward, done = self.board.step(move)
+            return x
+            # debug(board, state, reward, done)
+
+            # move = player.look_ahead(feature_maps)
+            # print(move, type(move))
+            # state, reward, done = board.step(move)
 
 
 def debug(board, state, reward, done):
@@ -15,8 +54,10 @@ def debug(board, state, reward, done):
 
 
 def create_board(color="black"):
-    """ Create a board with a GOBAN_SIZE from the const file and the color is
-        for the starting player """
+    """
+    Create a board with a GOBAN_SIZE from the const file and the color is
+    for the starting player
+    """
  
     board = Board(color, GOBAN_SIZE)
     return board
@@ -44,33 +85,26 @@ def prepare_state(state):
     return x
 
 
-def create_dataset(player, opponent, feature_extractor, board):
-    for i in range(SELF_PLAY_MATCH):
+def create_dataset(player, opponent, feature_extractor):
+    """
+    Used to create a learning dataset for the value and policy network.
+    Play against itself and backtrack the winner to maximize winner moves
+    probabilities
+    """
 
-        board.reset()
-        done = False
-        state = board.state
+    game_threads = Queue()
+    for id in range(THREADS):
+        game = GameThread(id, "Game {}".format(id), \
+                        player, opponent, feature_extractor)
+        game.start()
 
-        while not done:
-            x = prepare_state(state)
-            feature_maps = feature_extractor(x)
-
-            move = player.look_ahead(feature_maps)
-            state, reward, done = board.step(move)
-            # debug(board, state, reward, done)
-
-            # move = player.look_ahead(feature_maps)
-            # print(move, type(move))
-            # state, reward, done = board.step(move)
-
+    for i in range(SELF_PLAY_MATCH // THREADS):
+        game_threads.join()
 
 
 @click.command()
 @click.option("--human/--no_human", default=False, help="Whether to play against it or not")
 def main(human):
-
-    board = create_board(color="white")
-    done = False
 
     inplanes = (HISTORY + 1) * 2 + 1
     ## Probabilities for all moves + pass
@@ -79,9 +113,15 @@ def main(human):
     ## Init the 2 players
     player = agent.SuperAgent(OUTPLANES_MAP, outplanes)
     opponent = agent.SuperAgent(OUTPLANES_MAP, outplanes)
-    feature_extractor = feature.FeatureExtractor(inplanes, OUTPLANES_MAP)
 
-    dataset = create_dataset(player, opponent, feature_extractor, board)
+    if CUDA:
+        extractor = feature.Extractor(inplanes, OUTPLANES_MAP).cuda()
+    else:
+        extractor = feature.Extractor(inplanes, OUTPLANES_MAP)
+    
+    x = start_time = timeit.default_timer()
+    dataset = create_dataset(player, opponent, extractor)
+    print('Total time for create dataset: %.5fs' % x)
         
 
 
