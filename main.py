@@ -1,4 +1,6 @@
 import numpy as np
+import time
+import pickle
 from go import GoEnv as Board
 from torch.autograd import Variable
 import torch
@@ -6,24 +8,61 @@ from const import *
 import click
 import timeit
 from models import agent, feature
-import threading
-from queue import Queue
+import multiprocessing
 
 
 
-class GameThread(threading.Thread):
-    """ A single thread that is used to play a game """
+class GameManager(multiprocessing.Process):
+    def __init__(self, game_queue, result_queue):
+        multiprocessing.Process.__init__(self)
+        self.game_queue = game_queue
+        self.result_queue = result_queue
+    
+    def run(self):
+        """
+        Execute a task from the game_queue
+        """
 
-    def __init__(self, threadID, name, player, opponent, extractor):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.extractor = extractor
+        process_name = self.name
+        while True:
+            next_task = self.game_queue.get()
+            if next_task is None:
+                print('{} is done'.format(process_name))
+                self.game_queue.task_done()
+                break
+
+            print('Starting new task on {}'.format(process_name))
+            answer = next_task()
+            self.game_queue.task_done()
+            self.result_queue.put(answer)
+
+
+
+
+class Game:
+    """ A single process that is used to play a game """
+
+    def __init__(self, player, opponent, extractor):
         self.board = create_board()
         self.player = player
         self.opponent = opponent
+        self.extractor = extractor
     
-    def run(self):
+    def _prepare_state(self, state):
+        """
+        Transform the numpy state into a PyTorch tensor with cuda
+        if available
+        """
+
+        x = torch.from_numpy(np.array([state]))
+        if CUDA:
+            x = Variable(x).type(torch.FloatTensor).cuda()
+        else:
+            x = Variable(x).type(torch.FloatTensor)
+        return x
+
+
+    def __call__(self):
         """
         Make a game between the player and the opponent and return all the states
         and the associated probabilities of each move. Also returns the winner in
@@ -33,19 +72,19 @@ class GameThread(threading.Thread):
         done = False
         state = self.board.reset()
 
-        while not done:
-            x = prepare_state(state)
-            feature_maps = self.extractor(x)
+        # while not done:
+        x = self._prepare_state(state)
+            # feature_maps = self.extractor(x)
 
-            move = self.player.look_ahead(feature_maps)
-            state, reward, done = self.board.step(move)
-            return x
+            # move = self.player.look_ahead(feature_maps)
+            # state, reward, done = self.board.step(move)
+        return pickle.dumps(x)
             # debug(board, state, reward, done)
 
             # move = player.look_ahead(feature_maps)
             # print(move, type(move))
             # state, reward, done = board.step(move)
-
+    
 
 def debug(board, state, reward, done):
     board.render()
@@ -71,35 +110,41 @@ def human():
     return step
 
 
-def prepare_state(state):
-    """
-    Transform the numpy state into a PyTorch tensor with cuda
-    if available
-    """
-
-    x = torch.from_numpy(np.array([state]))
-    if CUDA:
-        x = Variable(x).type(torch.FloatTensor).cuda()
-    else:
-        x = Variable(x).type(torch.FloatTensor)
-    return x
 
 
-def create_dataset(player, opponent, feature_extractor):
+def create_dataset(player, opponent, extractor):
     """
     Used to create a learning dataset for the value and policy network.
     Play against itself and backtrack the winner to maximize winner moves
     probabilities
     """
 
-    game_threads = Queue()
-    for id in range(THREADS):
-        game = GameThread(id, "Game {}".format(id), \
-                        player, opponent, feature_extractor)
-        game.start()
+    queue = multiprocessing.JoinableQueue()
+    dataset = multiprocessing.Queue()
+    train_dataset = []
 
-    for i in range(SELF_PLAY_MATCH // THREADS):
-        game_threads.join()
+    game_managers = [
+        GameManager(queue, dataset)
+        for _ in range(CPU_CORES)
+    ]
+
+    for game_manager in game_managers:
+        game_manager.start()
+
+    for _ in range(NUM_MATCHES):
+        queue.put(Game(player, opponent, extractor))
+    
+    for _ in range(CPU_CORES):
+        queue.put(None)
+    
+    queue.join()
+    
+    for _ in range(NUM_MATCHES):
+        result = dataset.get()
+        train_dataset.append(pickle.loads(result))
+    
+    return train_dataset
+        
 
 
 @click.command()
@@ -119,9 +164,11 @@ def main(human):
     else:
         extractor = feature.Extractor(inplanes, OUTPLANES_MAP)
     
-    x = start_time = timeit.default_timer()
+    start = time.clock()
+    print('Starting\n')
     dataset = create_dataset(player, opponent, extractor)
-    print('Total time for create dataset: %.5fs' % x)
+    end = time.clock()
+    print(end - start)
         
 
 

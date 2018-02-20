@@ -1,12 +1,12 @@
 import torch
+import multiprocessing
 
 ##### CONFIG
 
 ## CUDA variable from Torch
 CUDA = torch.cuda.is_available()
 ## Number of threads, used for parallel matching atm
-THREADS = 50
-
+CPU_CORES = multiprocessing.cpu_count() * 3
 #####
 
 
@@ -29,7 +29,8 @@ MCTS_LOOK = 20
 ##### SELF-PLAY
 
 ## Number of self-play before training
-SELF_PLAY_MATCH = 200
+SELF_PLAY_MATCH = 200 
+NUM_MATCHES = SELF_PLAY_MATCH// CPU_CORES
 
 #####
 
