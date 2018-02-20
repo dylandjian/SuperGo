@@ -71,6 +71,12 @@ class GoEnv():
         self.done = True
 
 
+    def get_legal_moves(self):
+        print(self.player_color)
+        return self.board.get_legal_coords(self.player_color)
+
+
+
     def _act(self, action, history):
         """
         Executes an action for the current player
