@@ -4,6 +4,7 @@ from .go import GoEnv as Board
 import pickle
 from const import *
 from torch.autograd import Variable
+from .mcts import MCTS
 
 
 class GameManager(multiprocessing.Process):
@@ -70,20 +71,20 @@ class Game:
         return x
     
 
-    def _draw_move(self, counts, competitive=False):
+    def _draw_move(self, action_scores, competitive=False):
         """
         Find the best move, either deterministically for competitive play
         or stochiasticly according to some temperature constant
         """
 
         if competitive:
-            move = np.argmax(counts)
+            move = np.argmax(action_scores)
 
         else:
-            counts = np.power(counts, (1. / TEMP))
-            total = np.sum(counts)
-            probas = counts / total
-            move = np.random.choice(counts.shape[0], p=probas)
+            action_scores = np.power(action_scores, (1. / TEMP))
+            total = np.sum(action_scores)
+            probas = action_scores / total
+            move = np.random.choice(action_scores.shape[0], p=probas)
 
         return move
 
@@ -103,15 +104,15 @@ class Game:
             x = self._prepare_state(state)
             feature_maps = self.extractor(x)
 
-            # counts = mcts()
-            counts = [24, 56, 123, 43]
+             = MCTS(state, C_PUCT)
             move = self._draw_move(counts)
             state, reward, done = board.step(move)
+            dataset.append([x, move])
 
             ## Here we shape the training dataset with a state, 
             ## the output of the MCTS and a placeholder for the
             ## winner (either 1 or -1)
             break
-
+    
         ## Pickle the result because multiprocessing
         return pickle.dumps([dataset, reward])

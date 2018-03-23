@@ -6,6 +6,13 @@ import pickle
 import click
 
 
+from multiprocessing import set_start_method
+try:
+    set_start_method('spawn')
+except RuntimeError:
+    pass
+
+
 def create_dataset(player, opponent, extractor):
     """
     Used to create a learning dataset for the value and policy network.
@@ -25,7 +32,7 @@ def create_dataset(player, opponent, extractor):
     for game_manager in game_managers:
         game_manager.start()
 
-    for _ in range(NUM_MATCHES):
+    for _ in range(SELF_PLAY_MATCH):
         queue.put(game.Game(player, opponent, extractor))
     
     for _ in range(CPU_CORES):
@@ -33,11 +40,11 @@ def create_dataset(player, opponent, extractor):
     
     queue.join()
     
-    for _ in range(NUM_MATCHES):
+    for _ in range(SELF_PLAY_MATCH):
         result = dataset.get()
-        
         train_dataset.append(pickle.loads(result))
     
+    print(train_dataset)
     return train_dataset
 
 
@@ -45,17 +52,17 @@ def create_dataset(player, opponent, extractor):
 def main():
 
     ## Init the 2 players
-    extractor = feature.Extractor(INPLANES, OUTPLANES_MAP)
     if CUDA:
+        extractor = feature.Extractor(INPLANES, OUTPLANES_MAP).cuda()
         value_net = value.ValueNet(OUTPLANES_MAP).cuda()
         policy_net = policy.PolicyNet(OUTPLANES_MAP, OUTPLANES).cuda()
     else:
+        extractor = feature.Extractor(INPLANES, OUTPLANES_MAP)
         value_net = value.ValueNet(OUTPLANES_MAP)
         policy_net = policy.PolicyNet(OUTPLANES_MAP, OUTPLANES)    
     
     player = [value_net, policy_net]
     dataset = create_dataset(player, player, extractor)
-    print(dataset)
 
 
 if __name__ == "__main__":

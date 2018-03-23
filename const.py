@@ -8,7 +8,7 @@ CUDA = torch.cuda.is_available()
 ## Dtype of the tensors depending on CUDA
 DTYPE = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 ## Number of process, used for parallel matching atm
-CPU_CORES = multiprocessing.cpu_count() * 3
+CPU_CORES = multiprocessing.cpu_count() - 1
 #####
 
 
@@ -33,7 +33,7 @@ TEMP = 2
 ##### SELF-PLAY
 
 ## Number of self-play before training
-SELF_PLAY_MATCH = 500 
+SELF_PLAY_MATCH = 200
 ## Number of matches to run per process
 NUM_MATCHES = SELF_PLAY_MATCH // CPU_CORES
 
