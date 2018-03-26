@@ -1,10 +1,9 @@
-from lib import game
+from lib import game, mcts
 import multiprocessing
 from models import feature, value, policy
 from const import *
 import pickle
 import click
-
 
 from multiprocessing import set_start_method
 try:
@@ -13,7 +12,21 @@ except RuntimeError:
     pass
 
 
-def create_dataset(player, opponent, extractor):
+class Player:
+
+    def __init__(self):
+        if CUDA:
+            self.extractor = feature.Extractor(INPLANES, OUTPLANES_MAP).cuda()
+            self.value_net = value.ValueNet(OUTPLANES_MAP).cuda()
+            self.policy_net = policy.PolicyNet(OUTPLANES_MAP, OUTPLANES).cuda()
+        else:
+            self.extractor = feature.Extractor(INPLANES, OUTPLANES_MAP)
+            self.value_net = value.ValueNet(OUTPLANES_MAP)
+            self.policy_net = policy.PolicyNet(OUTPLANES_MAP, OUTPLANES)    
+        self.mcts = mcts.MCTS(C_PUCT, self.extractor, self.value_net, self.policy_net)
+
+
+def create_dataset(player, opponent):
     """
     Used to create a learning dataset for the value and policy network.
     Play against itself and backtrack the winner to maximize winner moves
@@ -33,7 +46,7 @@ def create_dataset(player, opponent, extractor):
         game_manager.start()
 
     for _ in range(SELF_PLAY_MATCH):
-        queue.put(game.Game(player, opponent, extractor))
+        queue.put(game.Game(player, opponent))
     
     for _ in range(CPU_CORES):
         queue.put(None)
@@ -50,19 +63,9 @@ def create_dataset(player, opponent, extractor):
 
 @click.command()
 def main():
-
-    ## Init the 2 players
-    if CUDA:
-        extractor = feature.Extractor(INPLANES, OUTPLANES_MAP).cuda()
-        value_net = value.ValueNet(OUTPLANES_MAP).cuda()
-        policy_net = policy.PolicyNet(OUTPLANES_MAP, OUTPLANES).cuda()
-    else:
-        extractor = feature.Extractor(INPLANES, OUTPLANES_MAP)
-        value_net = value.ValueNet(OUTPLANES_MAP)
-        policy_net = policy.PolicyNet(OUTPLANES_MAP, OUTPLANES)    
-    
-    player = [value_net, policy_net]
-    dataset = create_dataset(player, player, extractor)
+    player = Player()
+    dataset = create_dataset(player, player)
+    print(dataset)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,8 @@ CUDA = torch.cuda.is_available()
 ## Dtype of the tensors depending on CUDA
 DTYPE = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 ## Number of process, used for parallel matching atm
-CPU_CORES = multiprocessing.cpu_count() - 1
+# CPU_CORES = multiprocessing.cpu_count() - 1
+CPU_CORES = 1
 #####
 
 
@@ -26,6 +27,8 @@ EPOCHS = 100
 MCTS_LOOK = 20
 ## Temperature
 TEMP = 2
+## Exploration constant
+C_PUCT = 0.2
 
 #####
 

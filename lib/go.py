@@ -6,33 +6,6 @@ from const import HISTORY, GOBAN_SIZE
 
 
 
-def _pass_action(board_size):
-    return board_size ** 2
-
-
-def _resign_action(board_size):
-    return board_size ** 2 + 1
-
-
-def _coord_to_action(board, c):
-    '''Converts Pachi coordinates to actions'''
-    if c == pachi_py.PASS_COORD: return _pass_action(board.size)
-    if c == pachi_py.RESIGN_COORD: return _resign_action(board.size)
-    i, j = board.coord_to_ij(c)
-    return i * board.size + j
-
-
-def _action_to_coord(board, a):
-    '''Converts actions to Pachi coordinates'''
-    if a == _pass_action(board.size): return pachi_py.PASS_COORD
-    if a == _resign_action(board.size): return pachi_py.RESIGN_COORD
-    return board.ij_to_coord(a // board.size, a % board.size)
-
-
-def str_to_action(board, s):
-    return _coord_to_action(board, board.str_to_coord(s.encode()))
-
-
 def _format_state(history, player_color, board_size):
     """ 
     Format the encoded board into the state that is the input
@@ -72,9 +45,7 @@ class GoEnv():
 
 
     def get_legal_moves(self):
-        print(self.player_color)
         return self.board.get_legal_coords(self.player_color)
-
 
 
     def _act(self, action, history):
@@ -82,7 +53,6 @@ class GoEnv():
         Executes an action for the current player
         """
 
-        action = _action_to_coord(self.board, action)
         self.board = self.board.play(action, self.player_color)
         board = self.board.encode()
         color = self.player_color - 1
@@ -111,12 +81,6 @@ class GoEnv():
         if self.done:
             return _format_state(self.history, self.player_color, self.board_size), \
                      0., True
-
-        # If resigned, then we're done
-        if action == _resign_action(self.board_size):
-            self.done = True
-            return _format_state(self.history, self.player_color, self.board_size), \
-                    -1., True
 
         # Play
         try:

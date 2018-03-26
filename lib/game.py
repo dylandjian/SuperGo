@@ -20,7 +20,7 @@ class GameManager(multiprocessing.Process):
         self.result_queue = result_queue
     
 
-    def create_board(self, color="black"):
+    def create_board(self, color="white"):
         """
         Create a board with a GOBAN_SIZE from the const file and the color is
         for the starting player
@@ -54,10 +54,8 @@ class GameManager(multiprocessing.Process):
 class Game:
     """ A single process that is used to play a game between 2 agents """
 
-    def __init__(self, player, opponent, extractor):
-        self.player = player
-        self.opponent = opponent
-        self.extractor = extractor
+    def __init__(self, player, opponent):
+        self.players = [player, opponent]
     
 
     def _prepare_state(self, state):
@@ -71,24 +69,6 @@ class Game:
         return x
     
 
-    def _draw_move(self, action_scores, competitive=False):
-        """
-        Find the best move, either deterministically for competitive play
-        or stochiasticly according to some temperature constant
-        """
-
-        if competitive:
-            move = np.argmax(action_scores)
-
-        else:
-            action_scores = np.power(action_scores, (1. / TEMP))
-            total = np.sum(action_scores)
-            probas = action_scores / total
-            move = np.random.choice(action_scores.shape[0], p=probas)
-
-        return move
-
-
     def __call__(self, board):
         """
         Make a game between the player and the opponent and return all the states
@@ -101,18 +81,20 @@ class Game:
         dataset = []
 
         while not done:
-            x = self._prepare_state(state)
-            feature_maps = self.extractor(x)
+            for player in self.players:
+                x = self._prepare_state(state)
+                feature_maps = player.extractor(x)
 
-             = MCTS(state, C_PUCT)
-            move = self._draw_move(counts)
-            state, reward, done = board.step(move)
-            dataset.append([x, move])
+                player_move = player.policy_net(feature_maps)
+                print(player_move)
+                assert 0
+                state, reward, done = board.step(player_move)
+                dataset.append([x, player_move, 1])
 
+            break
             ## Here we shape the training dataset with a state, 
             ## the output of the MCTS and a placeholder for the
             ## winner (either 1 or -1)
-            break
     
         ## Pickle the result because multiprocessing
         return pickle.dumps([dataset, reward])

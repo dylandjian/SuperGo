@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 class Node():
 
@@ -11,11 +12,29 @@ class Node():
 
 class MCTS():
 
-    def __init__(self, state, c_puct, value_net, policy_net):
+    def __init__(self, board, c_puct, value_net, policy_net):
         self.value_net = value_net
         self.policy_net = policy_net
         self.c_puct = c_puct
-        self.init_state = state
+        self.board = board
+    
+
+    def _draw_move(self, action_scores, competitive=False):
+        """
+        Find the best move, either deterministically for competitive play
+        or stochiasticly according to some temperature constant
+        """
+
+        if competitive:
+            move = np.argmax(action_scores)
+
+        else:
+            action_scores = np.power(action_scores, (1. / TEMP))
+            total = np.sum(action_scores)
+            probas = action_scores / total
+            move = np.random.choice(action_scores.shape[0], p=probas)
+
+        return move
     
 
     def _puct(self, proba, total_count, count):
@@ -43,3 +62,9 @@ class MCTS():
             action_scores.append(action_score)
 
         return max(action_scores)
+    
+    def search(self, actions):
+        x = random.choice(actions)
+        return x
+
+
