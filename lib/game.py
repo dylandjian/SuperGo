@@ -1,11 +1,12 @@
 import multiprocessing
+import random
 import numpy as np
 from .go import GoEnv as Board
 import pickle
 from const import *
 from torch.autograd import Variable
 from .mcts import MCTS
-
+from copy import deepcopy
 
 class GameManager(multiprocessing.Process):
     """
@@ -68,6 +69,26 @@ class Game:
         x = Variable(x).type(DTYPE)
         return x
     
+    def _get_move(self, board, probas):
+        next_move_idx = -1
+        next_moves = np.argsort(probas)
+        legal_moves = board.get_legal_moves()
+
+        player_move = None
+        test = None
+        while not test:
+            if player_move is not None:
+                test = board.test_move(player_move)
+                if test > 0:
+                    legal_moves.remove(test)
+
+            while player_move not in legal_moves:
+                next_move_idx += 1
+                next_move = probas[np.where(next_moves == next_move_idx)[0]][0]
+                player_move = np.where(probas == next_move)[0]
+
+        return player_move
+
 
     def __call__(self, board):
         """
@@ -85,16 +106,19 @@ class Game:
                 x = self._prepare_state(state)
                 feature_maps = player.extractor(x)
 
-                player_move = player.policy_net(feature_maps)
-                print(player_move)
-                assert 0
-                state, reward, done = board.step(player_move)
-                dataset.append([x, player_move, 1])
+                probas = player.policy_net(feature_maps)\
+                                    .cpu().data.numpy()
 
-            break
-            ## Here we shape the training dataset with a state, 
-            ## the output of the MCTS and a placeholder for the
-            ## winner (either 1 or -1)
-    
+                player_move = self._get_move(board, probas)
+                print("\nFINAL MOVE ", player_move, "\n\n")
+                state, reward, done = board.step(player_move)
+                dataset.append([x, player_move, board.player_color])
+
+                ## Here we shape the training dataset with a state, 
+                ## the output of the MCTS and the player_color to be
+                ## able to backtrack the label after the game is done
+        
+        print("reward: ", reward)
+        assert 0
         ## Pickle the result because multiprocessing
         return pickle.dumps([dataset, reward])

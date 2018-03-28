@@ -25,5 +25,6 @@ class PolicyNet(nn.Module):
  
         x = F.relu(self.bn(self.conv(x)))
         x = x.view(-1)
-        probas = F.log_softmax(self.fc(x), dim=0)
+        x = self.fc(x)
+        probas = F.log_softmax(x, dim=0)
         return probas

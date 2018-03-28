@@ -5,6 +5,25 @@ import six
 from const import HISTORY, GOBAN_SIZE
 
 
+def _pass_action(board_size):
+    return board_size**2
+
+def _resign_action(board_size):
+    return board_size**2 + 1
+
+def _coord_to_action(board, c):
+    '''Converts Pachi coordinates to actions'''
+    if c == pachi_py.PASS_COORD: return _pass_action(board.size)
+    if c == pachi_py.RESIGN_COORD: return _resign_action(board.size)
+    i, j = board.coord_to_ij(c)
+    return i*board.size + j
+
+def _action_to_coord(board, a):
+    '''Converts actions to Pachi coordinates'''
+    if a == _pass_action(board.size): return pachi_py.PASS_COORD
+    if a == _resign_action(board.size): return pachi_py.RESIGN_COORD
+    return board.ij_to_coord(a // board.size, a % board.size)
+
 
 def _format_state(history, player_color, board_size):
     """ 
@@ -45,7 +64,11 @@ class GoEnv():
 
 
     def get_legal_moves(self):
-        return self.board.get_legal_coords(self.player_color)
+        legal_moves = self.board.get_legal_coords(self.player_color)
+        final_moves = []
+        for move in legal_moves:
+            final_moves.append(_coord_to_action(self.board, move)) 
+        return final_moves
 
 
     def _act(self, action, history):
@@ -53,12 +76,42 @@ class GoEnv():
         Executes an action for the current player
         """
 
-        self.board = self.board.play(action, self.player_color)
+        self.board = self.board.play(_action_to_coord(self.board, action), self.player_color)
         board = self.board.encode()
         color = self.player_color - 1
         history[color] = np.roll(history[color], 1, axis=0)
         history[color][0] = np.array(board[color])
         self.player_color = pachi_py.stone_other(self.player_color)
+
+
+    def test_move(self, action):
+        board_clone = self.board.clone()
+        current_score = self.board.fast_score
+
+        ## Handle self-atari
+        try:
+            board_clone = board_clone.play(_action_to_coord(board_clone, action), self.player_color)
+        except pachi_py.IllegalMove:
+            return action
+    
+        new_score = board_clone.fast_score
+        print("desired action: ", action)
+        self.render()
+        if self.player_color - 1 == 0:
+            print("WHITE DOIT JOUER")
+        else:
+            print("BLACK DOIT JOUER")
+        print('current score', current_score)
+        print('new score', new_score)
+        print("\n\n")
+        if (self.player_color - 1 == 0): ## BLACK
+            if new_score < 0:
+                return False
+            return True
+        else:
+            if new_score > 0:
+                return False
+            return True
 
 
     def reset(self):
@@ -69,12 +122,14 @@ class GoEnv():
 
         return _format_state(self.history, self.player_color, self.board_size)
 
+
     def render(self):
         outfile = sys.stdout
         outfile.write('To play: {}\n{}\n'.format(six.u(
                         pachi_py.color_to_str(self.player_color)),
                         self.board.__repr__().decode()))
         return outfile
+
 
     def step(self, action):
         # If already terminal, then don't do anything
@@ -101,4 +156,4 @@ class GoEnv():
         black_wins = self.board.official_score < 0
         player_wins = (white_wins and self.player_color == pachi_py.WHITE) or (black_wins and self.player_color == pachi_py.BLACK)
         reward = 1. if player_wins else -1. if (white_wins or black_wins) else 0.
-        return _format_state(self.history, self.color), rewa, self.board_sizerd, True
+        return _format_state(self.history, self.player_color, self.board_size), reward, True
