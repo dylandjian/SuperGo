@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 
 class ValueNet(nn.Module):
@@ -15,6 +16,7 @@ class ValueNet(nn.Module):
         self.conv_bn = nn.BatchNorm2d(2)
         self.fc1 = nn.Linear(2, 256)
         self.fc2 = nn.Linear(256, 1)
+        self.criterion = torch.nn.MSELoss()
         
 
     def forward(x):

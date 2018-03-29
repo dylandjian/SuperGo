@@ -8,15 +8,15 @@ CUDA = torch.cuda.is_available()
 ## Dtype of the tensors depending on CUDA
 DTYPE = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 ## Number of process, used for parallel matching atm
-# CPU_CORES = multiprocessing.cpu_count() - 1
+# CPU_CORES = multiprocessing.cpu_count() - 2
 CPU_CORES = 1
-#####
+####
 
 
 ##### GLOBAL
 
 ## Size of the Go board
-GOBAN_SIZE = 7
+GOBAN_SIZE = 13
 ## Number of last states to keep
 HISTORY = 7
 ## Learning rate
@@ -36,7 +36,7 @@ C_PUCT = 0.2
 ##### SELF-PLAY
 
 ## Number of self-play before training
-SELF_PLAY_MATCH = 200
+SELF_PLAY_MATCH = 50
 ## Number of matches to run per process
 NUM_MATCHES = SELF_PLAY_MATCH // CPU_CORES
 

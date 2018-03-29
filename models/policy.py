@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 
 
 class PolicyNet(nn.Module):
@@ -13,6 +14,7 @@ class PolicyNet(nn.Module):
         self.conv = nn.Conv2d(inplanes, 1, kernel_size=1)
         self.bn = nn.BatchNorm2d(1)
         self.fc = nn.Linear(outplanes - 1, outplanes)
+        self.criterion = torch.nn.CrossEntropyLoss()
         
 
     def forward(self, x):
@@ -26,5 +28,5 @@ class PolicyNet(nn.Module):
         x = F.relu(self.bn(self.conv(x)))
         x = x.view(-1)
         x = self.fc(x)
-        probas = F.log_softmax(x, dim=0)
+        probas = F.softmax(x, dim=0)
         return probas

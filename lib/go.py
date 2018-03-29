@@ -64,7 +64,7 @@ class GoEnv():
 
 
     def get_legal_moves(self):
-        legal_moves = self.board.get_legal_coords(self.player_color)
+        legal_moves = self.board.get_legal_coords(self.player_color, filter_suicides=True)
         final_moves = []
         for move in legal_moves:
             final_moves.append(_coord_to_action(self.board, move)) 
@@ -86,32 +86,17 @@ class GoEnv():
 
     def test_move(self, action):
         board_clone = self.board.clone()
-        current_score = self.board.fast_score
+        current_score = board_clone.official_score
 
-        ## Handle self-atari
-        try:
-            board_clone = board_clone.play(_action_to_coord(board_clone, action), self.player_color)
-        except pachi_py.IllegalMove:
-            return action
+        board_clone = board_clone.play(_action_to_coord(board_clone, action), self.player_color)
     
-        new_score = board_clone.fast_score
-        print("desired action: ", action)
-        self.render()
-        if self.player_color - 1 == 0:
-            print("WHITE DOIT JOUER")
-        else:
-            print("BLACK DOIT JOUER")
-        print('current score', current_score)
-        print('new score', new_score)
-        print("\n\n")
-        if (self.player_color - 1 == 0): ## BLACK
-            if new_score < 0:
-                return False
-            return True
-        else:
-            if new_score > 0:
-                return False
-            return True
+        new_score = board_clone.official_score
+
+        if self.player_color - 1 == 0 and new_score >= current_score \
+           or self.player_color - 1 == 1 and new_score <= current_score:
+           return False
+        
+        return True
 
 
     def reset(self):
@@ -132,28 +117,22 @@ class GoEnv():
 
 
     def step(self, action):
-        # If already terminal, then don't do anything
-        if self.done:
-            return _format_state(self.history, self.player_color, self.board_size), \
-                     0., True
 
-        # Play
-        try:
-            self._act(action, self.history)
-        except pachi_py.IllegalMove:
-            six.reraise(*sys.exc_info())
-
+        if not self.done:
+            try:
+                self._act(action, self.history)
+            except pachi_py.IllegalMove:
+                six.reraise(*sys.exc_info())
         # Reward: if nonterminal, then the reward is 0
         if not self.board.is_terminal:
             self.done = False
             return _format_state(self.history, self.player_color, self.board_size), \
-                    0., False
+                    -1, False
 
         # We're in a terminal state. Reward is 1 if won, -1 if lost
         assert self.board.is_terminal
         self.done = True
         white_wins = self.board.official_score > 0
         black_wins = self.board.official_score < 0
-        player_wins = (white_wins and self.player_color == pachi_py.WHITE) or (black_wins and self.player_color == pachi_py.BLACK)
-        reward = 1. if player_wins else -1. if (white_wins or black_wins) else 0.
+        reward = 1 if white_wins else 0
         return _format_state(self.history, self.player_color, self.board_size), reward, True
