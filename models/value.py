@@ -1,5 +1,7 @@
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
+from const import GOBAN_SIZE
 
 
 class ValueNet(nn.Module):
@@ -12,14 +14,14 @@ class ValueNet(nn.Module):
 
     def __init__(self, inplanes):
         super(ValueNet, self).__init__()
-        self.conv = nn.Conv2d(inplanes, 2, kernel_size=1)
-        self.conv_bn = nn.BatchNorm2d(2)
-        self.fc1 = nn.Linear(2, 256)
+        self.conv = nn.Conv2d(inplanes, 1, kernel_size=1)
+        self.conv_bn = nn.BatchNorm2d(1)
+        self.fc1 = nn.Linear(GOBAN_SIZE ** 2, 256)
         self.fc2 = nn.Linear(256, 1)
         self.criterion = torch.nn.MSELoss()
         
 
-    def forward(x):
+    def forward(self, x):
         """
         x : feature maps extracted from the state
         winning : probability of the current agent winning the game
@@ -27,6 +29,7 @@ class ValueNet(nn.Module):
         """
  
         x = F.relu(self.conv_bn(self.conv(x)))
+        x = x.view(-1)
         x = F.relu(self.fc1(x))
         winning = F.tanh(self.fc2(x))
         return winning

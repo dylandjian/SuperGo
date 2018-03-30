@@ -5,8 +5,47 @@ from .go import GoEnv as Board
 import pickle
 from const import *
 from torch.autograd import Variable
-from .mcts import MCTS
-from copy import deepcopy
+
+
+
+def create_matches(player, opponent=None, match_number=SELF_PLAY_MATCH):
+    """
+    Used to create a learning dataset for the value and policy network.
+    Play against itself and backtrack the winner to maximize winner moves
+    probabilities
+    """
+
+    queue = multiprocessing.JoinableQueue()
+    results = multiprocessing.Queue()
+    game_results = []
+
+    game_managers = [
+        GameManager(queue, results)
+        for _ in range(CPU_CORES)
+    ]
+
+    for game_manager in game_managers:
+        game_manager.start()
+
+    for id in range(match_number):
+        queue.put(Game(player, id, opponent=opponent))
+    
+    for _ in range(CPU_CORES):
+        queue.put(None)
+    
+    queue.join()
+    
+    print("--- Starting to fetch results ---")
+    for _ in range(match_number):
+        result = results.get()
+        if result:
+            game_results.append(pickle.loads(result))
+    print("--- Done fetching ---")
+    queue.close()
+    return game_results
+
+
+
 
 class GameManager(multiprocessing.Process):
     """
@@ -42,13 +81,14 @@ class GameManager(multiprocessing.Process):
 class Game:
     """ A single process that is used to play a game between 2 agents """
 
-    def __init__(self, player, opponent, id):
-        self.players = [player, opponent]
-        self.board = self.create_board()
+    def __init__(self, player, id, opponent=False):
+        self.board = self._create_board()
         self.id = id
+        self.player = player
+        self.opponent = opponent
     
 
-    def create_board(self, color="white"):
+    def _create_board(self, color="white"):
         """
         Create a board with a GOBAN_SIZE from the const file and the color is
         for the starting player
@@ -111,6 +151,24 @@ class Game:
         return player_move
 
 
+    def _play(self, state, player):
+
+        feature_maps = player.extractor(state)
+        probas = player.policy_net(feature_maps)\
+                            .cpu().data.numpy()
+
+        if player.passed is True:
+            player_move = GOBAN_SIZE ** 2
+        else:
+            player_move = self._get_move(self.board, probas)
+
+        if player_move == GOBAN_SIZE ** 2:
+            player.passed = True
+
+        state, reward, done = self.board.step(player_move)
+        return state, reward, done, player_move
+
+
     def __call__(self):
         """
         Make a game between the player and the opponent and return all the states
@@ -123,31 +181,31 @@ class Game:
         done = False
         state = self.board.reset()
         dataset = []
+        moves = 0
+
 
         while not done:
-            print("\n\n--- NEW TURN---\n\n")
-            for player in self.players:
-                x = self._prepare_state(state)
-                feature_maps = player.extractor(x)
+            ## Prevent cycling in 2 atari situations
+            ## poor fix, to improve
+            if moves > 60 * GOBAN_SIZE:
+                return False
 
-                probas = player.policy_net(feature_maps)\
-                                    .cpu().data.numpy()
-
-                if player.passed is True:
-                    player_move = GOBAN_SIZE ** 2
-                else:
-                    player_move = self._get_move(self.board, probas)
-
-                if player_move == GOBAN_SIZE ** 2:
-                    player.passed = True
-
+            if self.opponent:
                 self.board.render()
-                print("move: ", player_move)
-                state, reward, done = self.board.step(player_move)
-                dataset.append([x.cpu().data.numpy(), player_move, \
+                state, reward, done, _ = self._play(self._prepare_state(state), self.player)
+                state, reward, done, _ = self._play(self._prepare_state(state), self.opponent)
+                moves += 2
+            else:
+                state = self._prepare_state(state)
+                new_state, reward, done, player_move = self._play(state, self.player)
+                dataset.append([state.cpu().data.numpy(), player_move, \
                                 self.board.player_color])
+                state = new_state 
+                moves += 1
 
         print("[%d] Done" % (self.id + 1))
 
+        if self.opponent:
+            return pickle.dumps([reward])
         ## Pickle the result because multiprocessing
         return pickle.dumps([dataset, reward])

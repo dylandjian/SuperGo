@@ -19,22 +19,6 @@ class MCTS():
         self.board = board
     
 
-    def _draw_move(self, action_scores, competitive=False):
-        """
-        Find the best move, either deterministically for competitive play
-        or stochiasticly according to some temperature constant
-        """
-
-        if competitive:
-            move = np.argmax(action_scores)
-
-        else:
-            action_scores = np.power(action_scores, (1. / TEMP))
-            total = np.sum(action_scores)
-            probas = action_scores / total
-            move = np.random.choice(action_scores.shape[0], p=probas)
-
-        return move
     
 
     def _puct(self, proba, total_count, count):

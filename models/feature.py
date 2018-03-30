@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from const import HISTORY
+from const import BLOCKS
 
 
 class BasicBlock(nn.Module):
@@ -63,9 +63,9 @@ class Extractor(nn.Module):
                         padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(outplanes)
 
-        self.res1 = BasicBlock(outplanes, outplanes)
-        self.res2 = BasicBlock(outplanes, outplanes)
-        self.res3 = BasicBlock(outplanes, outplanes)
+        for block in range(BLOCKS):
+            setattr(self, "res{}".format(block), \
+                BasicBlock(outplanes, outplanes))
     
     def forward(self, x):
         """
@@ -74,9 +74,10 @@ class Extractor(nn.Module):
         """
 
         x = F.relu(self.bn1(self.conv1(x)))
-        x = self.res1(x)
-        x = self.res2(x)
-        feature_maps = self.res3(x)
+        for block in range(BLOCKS - 1):
+            x = getattr(self, "res{}".format(block))(x)
+        
+        feature_maps = getattr(self, "res{}".format(BLOCKS - 1))(x)
         return feature_maps
 
 

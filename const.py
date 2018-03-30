@@ -9,7 +9,7 @@ CUDA = torch.cuda.is_available()
 DTYPE = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 ## Number of process, used for parallel matching atm
 # CPU_CORES = multiprocessing.cpu_count() - 2
-CPU_CORES = 1
+CPU_CORES = 2
 ####
 
 
@@ -24,7 +24,7 @@ LR = 1e-2
 ## Number of epochs
 EPOCHS = 100
 ## Number of MCTS simulation
-MCTS_LOOK = 20
+MCTS_LOOK = 200
 ## Temperature
 TEMP = 2
 ## Exploration constant
@@ -36,7 +36,7 @@ C_PUCT = 0.2
 ##### SELF-PLAY
 
 ## Number of self-play before training
-SELF_PLAY_MATCH = 50
+SELF_PLAY_MATCH = 10
 ## Number of matches to run per process
 NUM_MATCHES = SELF_PLAY_MATCH // CPU_CORES
 
@@ -57,6 +57,8 @@ OUTPLANES_MAP = 10
 INPLANES = (HISTORY + 1) * 2 + 1
 ## Probabilities for all moves + pass
 OUTPLANES = (GOBAN_SIZE ** 2) + 1
+## Number of residual blocks
+BLOCKS = 3
 
 #####
 

@@ -123,7 +123,8 @@ class GoEnv():
                 self._act(action, self.history)
             except pachi_py.IllegalMove:
                 six.reraise(*sys.exc_info())
-        # Reward: if nonterminal, then the reward is 0
+
+        # Reward: if nonterminal, then the reward is -1
         if not self.board.is_terminal:
             self.done = False
             return _format_state(self.history, self.player_color, self.board_size), \
