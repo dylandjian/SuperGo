@@ -9,7 +9,6 @@ Ongoing project.
   * Rotation of board for more training samples
   * Dirichlet noise to prior probabilities in the rootnode
   * Multiprocessing of search
-  
 * Multiprocessing on the 3 components (self-play, training, evaluation)
 * Learning rate annealing (see [this](https://discuss.pytorch.org/t/adaptive-learning-rate/320/26))
 * Loading saved models
@@ -21,6 +20,7 @@ Ongoing project.
 
 
 # LONG TERM PLAN ?
+
 * Better display for game
 * OGS API
 * Statistics
