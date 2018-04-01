@@ -6,16 +6,18 @@ Ongoing project.
 # TODO
 
 * MCTS
-** Multiprocessing on the 3 components (self-play, training, evaluation)
+  * Rotation of board for more training samples
+  * Dirichlet noise to prior probabilities in the rootnode
+  * Multiprocessing of search
+  
+* Multiprocessing on the 3 components (self-play, training, evaluation)
 * Learning rate annealing (see [this](https://discuss.pytorch.org/t/adaptive-learning-rate/320/26))
-* Rotation of board for more training samples
 * Loading saved models
 * File of constants that match the paper constants
 * Just playing with already trained models with user input
-* Better Komi ?
 * Adaptative temperature (close to 1 during the first 30 moves of self-play, close to 0 after and during evaluation)
-* Dirichlet noise to prior probabilities in the rootnode
 * Optimization ?
+* Better Komi ?
 
 
 # LONG TERM PLAN ?
