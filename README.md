@@ -6,7 +6,7 @@ Ongoing project.
 # TODO
 
 * MCTS
-* Multiprocessing on the 3 components (self-play, training, evaluation)
+** Multiprocessing on the 3 components (self-play, training, evaluation)
 * Learning rate annealing (see [this](https://discuss.pytorch.org/t/adaptive-learning-rate/320/26))
 * Rotation of board for more training samples
 * Loading saved models
@@ -15,6 +15,7 @@ Ongoing project.
 * Better Komi ?
 * Adaptative temperature (close to 1 during the first 30 moves of self-play, close to 0 after and during evaluation)
 * Dirichlet noise to prior probabilities in the rootnode
+* Optimization ?
 
 
 # LONG TERM PLAN ?
@@ -28,7 +29,7 @@ Ongoing project.
 
 # DONE
 
-* Multiprocessing of games
+* Multiprocessing of games for self-play and evaluation
 * Models and training without MCTS
 * Evaluation
 * Dataset ring buffer of self-play games
