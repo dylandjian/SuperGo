@@ -8,8 +8,13 @@ CUDA = torch.cuda.is_available()
 ## Dtype of the tensors depending on CUDA
 DTYPE = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 ## Number of process, used for parallel matching atm
-# CPU_CORES = multiprocessing.cpu_count() - 2
-CPU_CORES = 2
+## Number of self-play parallel games
+# PARRALEL_SELF_PLAY = multiprocessing.cpu_count() - 2
+PARRALEL_SELF_PLAY = 6
+## Number of evaluation parralel games 
+PARRALEL_EVAL = 5
+## MCTS parallel
+MCTS_PARRALEL = 2
 ####
 
 
@@ -20,7 +25,7 @@ GOBAN_SIZE = 13
 ## Number of last states to keep
 HISTORY = 7
 ## Learning rate
-LR = 1e-2
+LR = 0.01
 ## Number of epochs
 EPOCHS = 100
 ## Number of MCTS simulation
@@ -29,6 +34,10 @@ MCTS_LOOK = 200
 TEMP = 2
 ## Exploration constant
 C_PUCT = 0.2
+## L2 Regularization
+L2_REG = 0.0001
+## Momentum
+MOMENTUM = 0.9
 
 #####
 
@@ -38,19 +47,17 @@ C_PUCT = 0.2
 ## Number of self-play before training
 SELF_PLAY_MATCH = 10
 ## Number of matches to run per process
-NUM_MATCHES = SELF_PLAY_MATCH // CPU_CORES
+NUM_MATCHES = SELF_PLAY_MATCH // PARRALEL_SELF_PLAY
 
 #####
 
 
 ##### TRAINING
 
-## Size of mini batch of moves during learning
-MINIBATCH = 64
 ## Number of moves to consider when creating the batch
 MOVES = 5000
 ## Number of mini-batch before evaluation during training
-TRAIN_EXAMPLE = 32 
+BATCH_SIZE = 64
 ## Number of channels of the output feature maps
 OUTPLANES_MAP = 10
 ## Shape of the input state
@@ -58,7 +65,7 @@ INPLANES = (HISTORY + 1) * 2 + 1
 ## Probabilities for all moves + pass
 OUTPLANES = (GOBAN_SIZE ** 2) + 1
 ## Number of residual blocks
-BLOCKS = 3
+BLOCKS = 2
 
 #####
 
@@ -67,9 +74,9 @@ BLOCKS = 3
 
 ## Number of matches against its old version to evaluate
 ## the newly trained network
-EVAL_MATCHS = 10
+EVAL_MATCHS = 20
 ## Threshold to keep the new neural net
-EVAL_THRESH = 0.6
+EVAL_THRESH = 0.53
 
 
 #####

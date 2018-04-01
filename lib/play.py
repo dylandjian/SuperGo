@@ -1,4 +1,5 @@
 import multiprocessing
+import timeit
 import random
 import numpy as np
 from .go import GoEnv as Board
@@ -8,7 +9,8 @@ from torch.autograd import Variable
 
 
 
-def create_matches(player, opponent=None, match_number=SELF_PLAY_MATCH):
+def create_matches(player, dataset=None, opponent=None, match_number=SELF_PLAY_MATCH,
+                   cores=1):
     """
     Used to create a learning dataset for the value and policy network.
     Play against itself and backtrack the winner to maximize winner moves
@@ -21,7 +23,7 @@ def create_matches(player, opponent=None, match_number=SELF_PLAY_MATCH):
 
     game_managers = [
         GameManager(queue, results)
-        for _ in range(CPU_CORES)
+        for _ in range(cores)
     ]
 
     for game_manager in game_managers:
@@ -30,19 +32,26 @@ def create_matches(player, opponent=None, match_number=SELF_PLAY_MATCH):
     for id in range(match_number):
         queue.put(Game(player, id, opponent=opponent))
     
-    for _ in range(CPU_CORES):
+    for _ in range(cores):
         queue.put(None)
     
     queue.join()
     
     print("--- Starting to fetch results ---")
+    final_results = []
     for _ in range(match_number):
         result = results.get()
         if result:
-            game_results.append(pickle.loads(result))
+            if dataset is not None:
+                # start_time = timeit.default_timer()
+                dataset.update(pickle.loads(result))
+                # print("time spent: %.3f seconds" % (timeit.default_timer() - start_time))
+            else:
+                final_results.append(pickle.loads(result))
+
     print("--- Done fetching ---")
     queue.close()
-    return game_results
+    return final_results
 
 
 
@@ -83,7 +92,7 @@ class Game:
 
     def __init__(self, player, id, opponent=False):
         self.board = self._create_board()
-        self.id = id
+        self.id = id + 1
         self.player = player
         self.opponent = opponent
     
@@ -147,6 +156,10 @@ class Game:
 
             while player_move not in legal_moves and len(legal_moves) > 0:
                 player_move = np.random.choice(probas.shape[0], p=probas)
+                if player_move not in legal_moves:
+                    old_proba = probas[player_move]
+                    probas = probas + (old_proba / (probas.shape[0] - 1))
+                    probas[player_move] = 0
 
         return player_move
 
@@ -154,9 +167,8 @@ class Game:
     def _play(self, state, player):
 
         feature_maps = player.extractor(state)
-        probas = player.policy_net(feature_maps)\
+        probas = player.policy_net(feature_maps)[0] \
                             .cpu().data.numpy()
-
         if player.passed is True:
             player_move = GOBAN_SIZE ** 2
         else:
@@ -176,7 +188,8 @@ class Game:
         training dataset
         """
 
-        print("[%d] Starting" % (self.id + 1))
+        # if self.id % 50 == 0:
+        #     print("[%d] Starting" % self.id)
 
         done = False
         state = self.board.reset()
@@ -191,21 +204,25 @@ class Game:
                 return False
 
             if self.opponent:
-                self.board.render()
+                if moves < 100 and self.id % 100:
+                    self.board.render()
                 state, reward, done, _ = self._play(self._prepare_state(state), self.player)
+                if moves < 100 and self.id % 100:
+                    self.board.render()
                 state, reward, done, _ = self._play(self._prepare_state(state), self.opponent)
                 moves += 2
             else:
                 state = self._prepare_state(state)
                 new_state, reward, done, player_move = self._play(state, self.player)
-                dataset.append([state.cpu().data.numpy(), player_move, \
-                                self.board.player_color])
+                dataset.append((state.cpu().data.numpy(), player_move, \
+                                self.board.player_color))
                 state = new_state 
                 moves += 1
 
-        print("[%d] Done" % (self.id + 1))
+        if self.id % 50 == 0:
+            print("[%d] Done" % self.id)
 
         if self.opponent:
             return pickle.dumps([reward])
         ## Pickle the result because multiprocessing
-        return pickle.dumps([dataset, reward])
+        return pickle.dumps((dataset, reward))

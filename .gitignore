@@ -1,2 +1,5 @@
 __pycache__
+saved_models/
+*.py.lprof
+pytorch/
 .vscode/
