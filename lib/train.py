@@ -7,13 +7,12 @@ import torch.nn.functional as F
 
 
 class AlphaLoss(torch.nn.Module):
-    def __init__(self, no_mcts=False):
-        self.no_mcts = no_mcts
+    def __init__(self):
         super(AlphaLoss, self).__init__()
 
     def forward(self, winner, self_play_winner, probas, self_play_probas):
         value_error = F.mse_loss(winner, self_play_winner)
-        if self.no_mcts:
+        if NO_MCTS:
             policy_error = F.binary_cross_entropy(probas, self_play_probas)
         else:
             policy_error = F.cross_entropy(probas, self_play_probas)
@@ -57,9 +56,9 @@ def train(dataloader, player, epoch):
                 print("batch index: %d loss: %.3f" \
                         % (batch_idx / 10, loss))
             example = {
-                'state': Variable(state).type(DTYPE),
-                'move': Variable(move).type(torch.cuda.LongTensor),
-                'winner': Variable(winner).type(DTYPE)
+                'state': Variable(state).type(DTYPE_FLOAT),
+                'winner': Variable(winner).type(DTYPE_FLOAT),
+                'move' : Variable(move).type(DTYPE_FLOAT if NO_MCTS else DTYPE_LONG)
             }
             loss = train_epoch(player, optimizer, example, criterion)
     

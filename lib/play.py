@@ -97,7 +97,7 @@ class Game:
         self.opponent = opponent
     
 
-    def _create_board(self, color="white"):
+    def _create_board(self, color="black"):
         """
         Create a board with a GOBAN_SIZE from the const file and the color is
         for the starting player
@@ -115,7 +115,7 @@ class Game:
         """
 
         x = torch.from_numpy(np.array([state]))
-        x = Variable(x).type(DTYPE)
+        x = Variable(x).type(DTYPE_FLOAT)
         return x
     
 
@@ -204,10 +204,10 @@ class Game:
                 return False
 
             if self.opponent:
-                if moves < 100 and self.id % 100:
+                if self.id == 8 and moves < 10:
                     self.board.render()
                 state, reward, done, _ = self._play(self._prepare_state(state), self.player)
-                if moves < 100 and self.id % 100:
+                if self.id == 8 and moves < 10:
                     self.board.render()
                 state, reward, done, _ = self._play(self._prepare_state(state), self.opponent)
                 moves += 2

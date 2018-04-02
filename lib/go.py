@@ -133,6 +133,12 @@ class GoEnv():
         # We're in a terminal state. Reward is 1 if won, -1 if lost
         assert self.board.is_terminal
         self.done = True
+        score = self.board.official_score
+        if self.board_size == 13:
+            score += 4.5
+        elif self.board_size == 19:
+            score += 7.5
+
         white_wins = self.board.official_score > 0
         black_wins = self.board.official_score < 0
         reward = 1 if white_wins else 0

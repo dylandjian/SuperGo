@@ -13,8 +13,10 @@ class SelfPlayDataset(Dataset):
         """ Instanciate a dataset """
 
         self.states = np.zeros((MOVES, (HISTORY + 1) * 2 + 1, GOBAN_SIZE, GOBAN_SIZE))
-        # self.plays = np.zeros((MOVES, GOBAN_SIZE ** 2 + 1))
-        self.plays = np.zeros(MOVES)
+        if NO_MCTS:
+            self.plays = np.zeros((MOVES, GOBAN_SIZE ** 2 + 1))
+        else:
+            self.plays = np.zeros(MOVES)
         self.winners = np.zeros(MOVES)
         self.current_len = 0
 
@@ -34,8 +36,10 @@ class SelfPlayDataset(Dataset):
         self.states[:number_moves] = np.vstack(dataset[:,0])
 
         self.plays = np.roll(self.plays, number_moves, axis=0)
-        # self.plays[np.arange(number_moves),np.hstack(dataset[:,1])] = 1
-        self.plays[:number_moves] = np.hstack(dataset[:,1])
+        if NO_MCTS:
+            self.plays[np.arange(number_moves),np.hstack(dataset[:,1])] = 1
+        else:
+            self.plays[:number_moves] = np.hstack(dataset[:,1])
 
         self.winners = np.roll(self.winners, number_moves, axis=0)
         winners = dataset[:,2]

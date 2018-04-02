@@ -40,7 +40,7 @@ def main():
     dataset = SelfPlayDataset()
     improvements = 0
     current_time = int(time.time())
-    for epoch in range(1, 100):
+    for epoch in range(1, 10000):
         print("--- NEW EPOCH : %d ---" % epoch)
         start_time = timeit.default_timer()
         play.create_matches(player, dataset=dataset, cores=PARRALEL_SELF_PLAY)

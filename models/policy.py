@@ -15,7 +15,7 @@ class PolicyNet(nn.Module):
         self.conv = nn.Conv2d(inplanes, 1, kernel_size=1)
         self.bn = nn.BatchNorm2d(1)
         self.fc = nn.Linear(outplanes - 1, outplanes)
-        self.criterion = torch.nn.BCELoss(reduce=False)
+        self.criterion = torch.nn.CrossEntropyLoss()
         
 
     def forward(self, x):
