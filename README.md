@@ -9,7 +9,7 @@ Ongoing project.
   * Rotation of board for more training samples
   * Dirichlet noise to prior probabilities in the rootnode
   * Multiprocessing of search
-* Multiprocessing on the 3 components (self-play, training, evaluation)
+* Make the 3 components (self-play, training, evaluation) asynchronous
 * Learning rate annealing (see [this](https://discuss.pytorch.org/t/adaptive-learning-rate/320/26))
 * Loading saved models
 * File of constants that match the paper constants
