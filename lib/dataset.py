@@ -47,7 +47,6 @@ class SelfPlayDataset(Dataset):
         winners[np.where(winners != -1)] = 1
         self.winners[:number_moves] = winners
     
-
     def update_batch(self, raw_dataset):
         for game in raw_dataset:
             self.update(game)

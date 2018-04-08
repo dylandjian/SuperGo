@@ -1,4 +1,5 @@
 __pycache__
+test.py
 saved_models/
 *.py.lprof
 pytorch/

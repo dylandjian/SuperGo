@@ -11,9 +11,9 @@ DTYPE_LONG = torch.cuda.LongTensor if CUDA else torch.LongTensor
 ## Number of process, used for parallel matching atm
 ## Number of self-play parallel games
 # PARRALEL_SELF_PLAY = multiprocessing.cpu_count() - 2
-PARRALEL_SELF_PLAY = 6
+PARRALEL_SELF_PLAY = 4
 ## Number of evaluation parralel games 
-PARRALEL_EVAL = 5
+PARRALEL_EVAL = 1
 ## MCTS parallel
 MCTS_PARRALEL = 2
 ####
@@ -68,7 +68,9 @@ INPLANES = (HISTORY + 1) * 2 + 1
 ## Probabilities for all moves + pass
 OUTPLANES = (GOBAN_SIZE ** 2) + 1
 ## Number of residual blocks
-BLOCKS = 7
+BLOCKS = 5
+## Number of training step before evaluating
+TRAIN_STEPS = 100
 
 #####
 
@@ -77,7 +79,7 @@ BLOCKS = 7
 
 ## Number of matches against its old version to evaluate
 ## the newly trained network
-EVAL_MATCHS = 100
+EVAL_MATCHS = 4
 ## Threshold to keep the new neural net
 EVAL_THRESH = 0.53
 

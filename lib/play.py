@@ -2,20 +2,26 @@ import multiprocessing
 import timeit
 import random
 import numpy as np
+from models.agent import Player
 from .go import GoEnv as Board
 import pickle
 from const import *
+from pymongo import MongoClient
+import time
+import os
 from torch.autograd import Variable
 
 
+def add_games(queue, player, opponent, match_number, cores):
+    for id in range(match_number):
+        queue.put(Game(player, id, opponent=opponent))
+    
+    for _ in range(cores):
+        queue.put(None)
 
-def create_matches(player, dataset=None, opponent=None, match_number=SELF_PLAY_MATCH,
-                   cores=1):
-    """
-    Used to create a learning dataset for the value and policy network.
-    Play against itself and backtrack the winner to maximize winner moves
-    probabilities
-    """
+
+def create_matches(player, opponent=None, cores=1, match_number=10):
+    """ Create the process queue """
 
     queue = multiprocessing.JoinableQueue()
     results = multiprocessing.Queue()
@@ -29,30 +35,85 @@ def create_matches(player, dataset=None, opponent=None, match_number=SELF_PLAY_M
     for game_manager in game_managers:
         game_manager.start()
 
-    for id in range(match_number):
-        queue.put(Game(player, id, opponent=opponent))
+    add_games(queue, player, opponent, match_number, cores)
     
-    for _ in range(cores):
-        queue.put(None)
+    return queue, results
+
+def get_player(current_time, improvements):
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), \
+                            '..', 'saved_models', current_time)
+    try:
+        mod = os.listdir(path)
+        models = list(filter(lambda model: model.startswith(str(improvements)), \
+                mod))
+        models.sort()
+        if len(models) == 0:
+            return False
+    except FileNotFoundError:
+        return False
     
+    player = Player()
+    player.load_models(path, models)
+    return player
+
+
+def self_play(current_time):
+    """
+    Used to create a learning dataset for the value and policy network.
+    Play against itself and backtrack the winner to maximize winner moves
+    probabilities
+    """
+
+    client = MongoClient()
+    collection = client.superGo[current_time]
+    game_id = 0
+    improvements = 1
+    player = False
+
+    while True:
+        new_player = get_player(current_time, improvements)
+        if improvements == 1 and not player and not new_player:
+            print("[PLAY] Waiting for first player")
+            time.sleep(5)
+            continue
+
+        if new_player:
+            player = new_player
+            improvements = improvements + 1
+            print("[PLAY] New player !")
+
+        queue, results = create_matches(player , \
+                    cores=PARRALEL_SELF_PLAY, match_number=SELF_PLAY_MATCH) 
+        print("[PLAY] Starting to fetch fresh games")
+        for _ in range(SELF_PLAY_MATCH):
+            result = results.get()
+            if result:
+                # start_time = timeit.default_timer()
+                collection.insert({
+                    "game": result,
+                    "id": game_id
+                })
+                game_id += 1
+                # print("time spent: %.3f seconds" % (timeit.default_timer() - start_time))
+        print("[PLAY] Done fetching")
+        queue.close()
+
+
+def play(player, opponent):
+    """ Game between two players, for evaluation """
+
+    queue, results = create_matches(player, opponent=opponent, \
+                cores=PARRALEL_EVAL, match_number=EVAL_MATCHS) 
     queue.join()
     
-    print("--- Starting to fetch results ---")
-    final_results = []
-    for _ in range(match_number):
+    for _ in range(EVAL_MATCH):
         result = results.get()
         if result:
-            if dataset is not None:
-                # start_time = timeit.default_timer()
-                dataset.update(pickle.loads(result))
-                # print("time spent: %.3f seconds" % (timeit.default_timer() - start_time))
-            else:
-                final_results.append(pickle.loads(result))
-
-    print("--- Done fetching ---")
+            # start_time = timeit.default_timer()
+            final_result.append(pickle.dumps(result))
+            # print("time spent: %.3f seconds" % (timeit.default_timer() - start_time))
     queue.close()
-    return final_results
-
+    return final_result
 
 
 
@@ -66,7 +127,6 @@ class GameManager(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.game_queue = game_queue
         self.result_queue = result_queue
-
 
     def run(self):
         """ Execute a task from the game_queue """
@@ -188,14 +248,10 @@ class Game:
         training dataset
         """
 
-        # if self.id % 50 == 0:
-        #     print("[%d] Starting" % self.id)
-
         done = False
         state = self.board.reset()
         dataset = []
         moves = 0
-
 
         while not done:
             ## Prevent cycling in 2 atari situations
@@ -213,6 +269,8 @@ class Game:
                 moves += 2
             else:
                 state = self._prepare_state(state)
+                # if self.id == 8 and moves < 10:
+                #     self.board.render()
                 new_state, reward, done, player_move = self._play(state, self.player)
                 dataset.append((state.cpu().data.numpy(), player_move, \
                                 self.board.player_color))
@@ -220,7 +278,7 @@ class Game:
                 moves += 1
 
         if self.id % 50 == 0:
-            print("[%d] Done" % self.id)
+            print("[PLAY] %dth game done" % self.id)
 
         if self.opponent:
             return pickle.dumps([reward])
