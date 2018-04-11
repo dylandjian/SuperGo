@@ -3,6 +3,7 @@ from const import *
 
 
 def evaluate(player, new_player):
+    print("[EVALUATION] Starting to evaluate trained model !")
     results = play(player, opponent=new_player)
     black_wins = 0
     white_wins = 0
@@ -12,7 +13,7 @@ def evaluate(player, new_player):
         else:
             black_wins += 1
     
-    print("[EVAL] black wins: %d vs %d for white" % (black_wins, white_wins))
+    print("[EVALUATION] black wins: %d vs %d for white" % (black_wins, white_wins))
     if black_wins >= EVAL_THRESH * len(results):
         return True
     return False

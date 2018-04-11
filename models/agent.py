@@ -17,13 +17,17 @@ class Player:
             self.extractor = Extractor(INPLANES, OUTPLANES_MAP)
             self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES)
             self.policy_net = PolicyNet(OUTPLANES_MAP, OUTPLANES)    
-        self.mcts = MCTS(C_PUCT, self.extractor, self.value_net, self.policy_net)
+        
+        if not NO_MCTS:
+            self.mcts = MCTS(C_PUCT, self.extractor, self.value_net, self.policy_net)
         self.passed = False
     
+
     def save_models(self, improvements, current_time, optimizer=None):
         for model in ["extractor", "policy_net", "value_net"]:
             self._save_checkpoint(getattr(self, model),\
                                 improvements, model, current_time, optimizer)
+
 
     def _save_checkpoint(self, model, current_version, filename, current_time, optimizer):
         dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), \
@@ -38,6 +42,7 @@ class Player:
             state['optimizer'] = optimizer.state_dict(),
         filename = os.path.join(dir_path, "{}-{}.pth.tar".format(current_version, filename))
         torch.save(state, filename)
+
 
     def load_models(self, path, models):
         names = ["extractor", "policy_net", "value_net"]

@@ -1,4 +1,5 @@
 import multiprocessing
+from copy import deepcopy
 import timeit
 import random
 import numpy as np
@@ -10,6 +11,7 @@ from pymongo import MongoClient
 import time
 import os
 from torch.autograd import Variable
+from .utils import get_player
 
 
 def add_games(queue, player, opponent, match_number, cores):
@@ -39,22 +41,6 @@ def create_matches(player, opponent=None, cores=1, match_number=10):
     
     return queue, results
 
-def get_player(current_time, improvements):
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), \
-                            '..', 'saved_models', current_time)
-    try:
-        mod = os.listdir(path)
-        models = list(filter(lambda model: model.startswith(str(improvements)), \
-                mod))
-        models.sort()
-        if len(models) == 0:
-            return False
-    except FileNotFoundError:
-        return False
-    
-    player = Player()
-    player.load_models(path, models)
-    return player
 
 
 def self_play(current_time):
@@ -72,6 +58,7 @@ def self_play(current_time):
 
     while True:
         new_player = get_player(current_time, improvements)
+        print("[PLAY] Current improvement level: %d" % improvements)
         if improvements == 1 and not player and not new_player:
             print("[PLAY] Waiting for first player")
             time.sleep(5)
@@ -97,21 +84,25 @@ def self_play(current_time):
                 # print("time spent: %.3f seconds" % (timeit.default_timer() - start_time))
         print("[PLAY] Done fetching")
         queue.close()
+        time.sleep(10)
 
 
 def play(player, opponent):
     """ Game between two players, for evaluation """
 
-    queue, results = create_matches(player, opponent=opponent, \
+    queue, results = create_matches(deepcopy(player), opponent=deepcopy(opponent), \
                 cores=PARRALEL_EVAL, match_number=EVAL_MATCHS) 
     queue.join()
     
-    for _ in range(EVAL_MATCH):
+    print("[EVALUATION] Starting to fetch fresh games")
+    final_result = []
+    for _ in range(EVAL_MATCHS):
         result = results.get()
         if result:
             # start_time = timeit.default_timer()
-            final_result.append(pickle.dumps(result))
+            final_result.append(pickle.loads(result))
             # print("time spent: %.3f seconds" % (timeit.default_timer() - start_time))
+    print("[EVALUATION] Done fetching")
     queue.close()
     return final_result
 
@@ -150,20 +141,22 @@ class GameManager(multiprocessing.Process):
 class Game:
     """ A single process that is used to play a game between 2 agents """
 
-    def __init__(self, player, id, opponent=False):
-        self.board = self._create_board()
+    def __init__(self, player, id, color="black", goban_size=GOBAN_SIZE, opponent=False):
+        self.goban_size = goban_size
         self.id = id + 1
         self.player = player
         self.opponent = opponent
+        self.board = self._create_board(color)
+        self.player_color = 2 if color == "black" else 1
     
 
-    def _create_board(self, color="black"):
+    def _create_board(self, color):
         """
-        Create a board with a GOBAN_SIZE from the const file and the color is
+        Create a board with a goban_size and the color is
         for the starting player
         """
     
-        board = Board(color, GOBAN_SIZE)
+        board = Board(color, self.goban_size)
         board.reset()
         return board
     
@@ -178,6 +171,13 @@ class Game:
         x = Variable(x).type(DTYPE_FLOAT)
         return x
     
+
+    def _swap_color(self):
+        if self.player_color == 1:
+            self.player_color = 2
+        else:
+            self.player_color = 1
+
 
     def _draw_move(self, action_scores, competitive=False):
         """
@@ -205,9 +205,9 @@ class Game:
 
         while valid_move is False and can_pass is False:
             if (len(legal_moves) == 1 and \
-                legal_moves[0] == GOBAN_SIZE ** 2) or len(legal_moves) == 0:
+                legal_moves[0] == self.goban_size ** 2) or len(legal_moves) == 0:
                 can_pass = True
-                player_move = GOBAN_SIZE ** 2
+                player_move = self.goban_size ** 2
 
             if player_move is not None: 
                 valid_move = board.test_move(player_move)
@@ -230,11 +230,11 @@ class Game:
         probas = player.policy_net(feature_maps)[0] \
                             .cpu().data.numpy()
         if player.passed is True:
-            player_move = GOBAN_SIZE ** 2
+            player_move = self.goban_size ** 2
         else:
             player_move = self._get_move(self.board, probas)
 
-        if player_move == GOBAN_SIZE ** 2:
+        if player_move == self.goban_size ** 2:
             player.passed = True
 
         state, reward, done = self.board.step(player_move)
@@ -254,33 +254,44 @@ class Game:
         moves = 0
 
         while not done:
+
             ## Prevent cycling in 2 atari situations
-            ## poor fix, to improve
-            if moves > 60 * GOBAN_SIZE:
+            if moves > 60 * self.goban_size:
                 return False
 
             if self.opponent:
-                if self.id == 8 and moves < 10:
-                    self.board.render()
                 state, reward, done, _ = self._play(self._prepare_state(state), self.player)
-                if self.id == 8 and moves < 10:
-                    self.board.render()
                 state, reward, done, _ = self._play(self._prepare_state(state), self.opponent)
                 moves += 2
             else:
                 state = self._prepare_state(state)
-                # if self.id == 8 and moves < 10:
-                #     self.board.render()
                 new_state, reward, done, player_move = self._play(state, self.player)
+                self._swap_color()
                 dataset.append((state.cpu().data.numpy(), player_move, \
-                                self.board.player_color))
+                                self.player_color))
                 state = new_state 
                 moves += 1
-
-        if self.id % 50 == 0:
-            print("[PLAY] %dth game done" % self.id)
-
+            
+        ## Pickle the result because multiprocessing
         if self.opponent:
             return pickle.dumps([reward])
-        ## Pickle the result because multiprocessing
         return pickle.dumps((dataset, reward))
+
+    
+    def solo_play(self, move=None, init=False):
+        """ Used to play against a human or for GTP """
+
+        if init:
+            state = self.board.reset()
+        else:
+            state = self.board.state
+        
+        
+        state = self._prepare_state(state)
+        if move:
+            state, reward, done, _ = self._play(state, self.player)
+        else:
+            pass
+
+        return True
+

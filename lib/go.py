@@ -57,11 +57,20 @@ class GoEnv():
         }
         self.player_color = colormap[player_color]
 
-        # Filled in by _reset()
+        self.komi = self._get_komi(board_size)
+        # Filled in by _reset() at the beginning
         self.state = _format_state(self.history,
                         self.player_color, self.board_size)
         self.done = True
 
+
+    def _get_komi(self, board_size):
+        if board_size == 19:
+            return 7.5
+        elif board_size == 13:
+            return 4.5
+        return 0
+    
 
     def get_legal_moves(self):
         legal_moves = self.board.get_legal_coords(self.player_color, filter_suicides=True)
@@ -86,11 +95,10 @@ class GoEnv():
 
     def test_move(self, action):
         board_clone = self.board.clone()
-        current_score = board_clone.official_score
+        current_score = board_clone.official_score  + self.komi
 
         board_clone = board_clone.play(_action_to_coord(board_clone, action), self.player_color)
-    
-        new_score = board_clone.official_score
+        new_score = board_clone.official_score + self.komi
 
         if self.player_color - 1 == 0 and new_score >= current_score \
            or self.player_color - 1 == 1 and new_score <= current_score:

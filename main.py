@@ -19,8 +19,8 @@ def main():
     try:
         x = pool.apply_async(self_play, args=(current_time,))
         y = pool.apply_async(train, args=(current_time,))
-        # x.get()
-        y.get()
+        x.get()
+        # y.get()
     except KeyboardInterrupt:
         pool.terminate()
     else:
