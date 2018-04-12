@@ -58,7 +58,8 @@ def self_play(current_time):
 
     while True:
         new_player = get_player(current_time, improvements)
-        print("[PLAY] Current improvement level: %d" % improvements)
+        print("[PLAY] Current improvement level: {}"\
+                            .format(improvements))
         if improvements == 1 and not player and not new_player:
             print("[PLAY] Waiting for first player")
             time.sleep(5)
@@ -278,20 +279,22 @@ class Game:
         return pickle.dumps((dataset, reward))
 
     
-    def solo_play(self, move=None, init=False):
-        """ Used to play against a human or for GTP """
+    def solo_play(self, move=None):
+        """ Used to play against a human or for GTP, cant be called
+        in a multiprocess """
 
-        if init:
-            state = self.board.reset()
+        ## Agent plays the first move of the game
+        if not move:
+            state = self._prepare_state(self.board.state)
+            state, reward, done, player_move = self._play(state, self.player)
+            self._swap_color()
+            return player_move
+        ## Otherwise just play a move and answer it
         else:
-            state = self.board.state
-        
-        
-        state = self._prepare_state(state)
-        if move:
-            state, reward, done, _ = self._play(state, self.player)
-        else:
-            pass
-
-        return True
+            state, reward, done = self.board.step(move)
+            self._swap_color()
+            return True
+    
+    def reset(self):
+        state = self.board.reset()
 

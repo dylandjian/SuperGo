@@ -36,7 +36,7 @@ TEMP = 2
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
-L2_REG = 0.00001
+L2_REG = 0.0001
 ## Momentum
 MOMENTUM = 0.92
 ## Activate MCTS
@@ -73,6 +73,10 @@ BLOCKS = 10
 TRAIN_STEPS = 200
 ## Optimizer
 ADAM = False
+## Learning rate annealing factor
+LR_DECAY = 0.1
+## Learning rate anmnealing interval
+LR_DECAY_ITE = 1 * TRAIN_STEPS
 
 #####
 

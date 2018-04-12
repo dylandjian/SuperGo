@@ -5,56 +5,8 @@ import numpy as np
 import re
 import pickle
 import sys
+from lib.gtp import format_success, parse_message
 
-
-class GTP:
-    def __init__(self, name, version, komi, boardsize):
-        self.name = name
-        self.version = version
-        self.komi = komi
-        self.boardsize = boardsize
-
-    def send_cmd(self, cmd):
-        print("{} {}".format(cmd, str(getattr(self, cmd))), end="")
-        sys.stdout.flush()
-    
-    def send(self, msg):
-        print("{}".format(msg), end="")
-        sys.stdout.flush()
-
-
-def pre_engine(s):
-    s = re.sub("[^\t\n -~]", "", s)
-    s = s.split("#")[0]
-    s = s.replace("\t", " ")
-    return s
-
-
-def parse_message(message):
-    message = pre_engine(message).strip()
-    first, rest = (message.split(" ", 1) + [None])[:2]
-    if first.isdigit():
-        message_id = int(first)
-        if rest is not None:
-            command, arguments = (rest.split(" ", 1) + [None])[:2]
-        else:
-            command, arguments = None, None
-    else:
-        message_id = None
-        command, arguments = first, rest
-
-    return message_id, command, arguments
-
-
-def format_success(message_id, response=None):
-    if response is None:
-        response = ""
-    else:
-        response = " {}".format(response)
-    if message_id:
-        return "={}{}\n\n".format(message_id, response)
-    else:
-        return "={}\n\n".format(response)
 
 def game_to_gtp(game):
     moves = np.array(game[0])[:,[1,2]]
@@ -77,7 +29,6 @@ def game_to_gtp(game):
             print(format_success(None, response="test"))
         else:
             print('?name    %s    ???\n\n' % (command))
-        # sys.stdout.flush()
 
 
 if __name__ == "__main__":

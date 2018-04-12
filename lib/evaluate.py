@@ -13,7 +13,8 @@ def evaluate(player, new_player):
         else:
             black_wins += 1
     
-    print("[EVALUATION] black wins: %d vs %d for white" % (black_wins, white_wins))
+    print("[EVALUATION] black wins: {} vs {} for white"\
+            .format(black_wins, white_wins))
     if black_wins >= EVAL_THRESH * len(results):
         return True
     return False
