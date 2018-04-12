@@ -72,11 +72,11 @@ BLOCKS = 10
 ## Number of training step before evaluating
 TRAIN_STEPS = 200
 ## Optimizer
-ADAM = False
+ADAM = True
 ## Learning rate annealing factor
 LR_DECAY = 0.1
 ## Learning rate anmnealing interval
-LR_DECAY_ITE = 1 * TRAIN_STEPS
+LR_DECAY_ITE = 10 * TRAIN_STEPS
 
 #####
 

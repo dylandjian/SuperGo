@@ -15,10 +15,11 @@ Ongoing project.
 * Better Komi ?
 * File of constants that match the paper constants
 * OGS / KGS API
+* Use logging instead of prints
 
 # CURRENTLY DOING
 
-* Use logging instead of prints
+* Resume training
 * Testing on 9x9 without MCTS to see if it actually learns something
 
 # LONG TERM PLAN ?

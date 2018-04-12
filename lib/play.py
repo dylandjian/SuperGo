@@ -58,8 +58,7 @@ def self_play(current_time):
 
     while True:
         new_player = get_player(current_time, improvements)
-        print("[PLAY] Current improvement level: {}"\
-                            .format(improvements))
+        print("[PLAY] Current improvement level: %d" % improvements)
         if improvements == 1 and not player and not new_player:
             print("[PLAY] Waiting for first player")
             time.sleep(5)

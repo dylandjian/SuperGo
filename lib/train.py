@@ -38,7 +38,7 @@ def fetch_new_games(collection, dataset, last_id):
     new_games = collection.find({"id": {"$gt": last_id}}).sort('_id', -1)
     added_moves = 0
     added_games = 0
-    print("[TRAIN] Fetching: {} new games from the db".format(new_games.count()))
+    print("[TRAIN] Fetching: %d new games from the db"% (new_games.count()))
 
     for game in new_games:
         number_moves = dataset.update(pickle.loads(game['game']))
@@ -49,8 +49,8 @@ def fetch_new_games(collection, dataset, last_id):
         if added_moves > MOVES * 0.4:
             break
     
-    print("[TRAIN] Last id: {}, added games: {}, added moves: {}"\
-                    .format(last_id, added_games, added_moves))
+    print("[TRAIN] Last id: %d, added games: %d, added moves: %d"\
+                    % (last_id, added_games, added_moves))
     return last_id + new_games.count()
 
 
@@ -132,7 +132,6 @@ def train(current_time):
             joint_params = list(new_player.extractor.parameters()) + \
                         list(new_player.policy_net.parameters()) +\
                         list(new_player.value_net.parameters())
-            lr = update_lr(lr, total_ite)
             if ADAM:
                 optimizer = torch.optim.Adam(joint_params, lr=lr, weight_decay=L2_REG)
             else:
@@ -148,7 +147,7 @@ def train(current_time):
             if update:
                 break
 
-            # optimizer = exp_lr_scheduler(optimizer, ite)
+            lr = update_lr(lr, total_ite)
             if ite % TRAIN_STEPS == 0:
                 pending_player = deepcopy(new_player)
                 last_id = fetch_new_games(collection, dataset, last_id)
@@ -170,8 +169,8 @@ def train(current_time):
             }
             loss = train_epoch(new_player, optimizer, example, criterion)
             if ite % 10 == 0:
-                print("[TRAIN] batch index: {} loss: {0:.3g}"\
-                        .format(batch_idx / 10, loss))
+                print("[TRAIN] batch index: %d loss: %.3f"\
+                        % (batch_idx / 10, loss))
             
             ite += 1
             total_ite += 1
