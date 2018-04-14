@@ -1,14 +1,15 @@
+import os
 from .feature import Extractor
 from .value import ValueNet
 from .policy import PolicyNet
-import os
 from .mcts import MCTS
 from const import *
 
 
 class Player:
 
-    def __init__(self):
+    def __init__(self, mcts_flag=MCTS_FLAG):
+        self.mcts_flag = mcts_flag
         if CUDA:
             self.extractor = Extractor(INPLANES, OUTPLANES_MAP).cuda()
             self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES).cuda()
@@ -18,18 +19,22 @@ class Player:
             self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES)
             self.policy_net = PolicyNet(OUTPLANES_MAP, OUTPLANES)    
         
-        if not NO_MCTS:
+        if mcts_flag:
             self.mcts = MCTS(C_PUCT, self.extractor, self.value_net, self.policy_net)
         self.passed = False
     
 
     def save_models(self, improvements, current_time, optimizer=None):
+        """ Save the models """
+
         for model in ["extractor", "policy_net", "value_net"]:
             self._save_checkpoint(getattr(self, model),\
                                 improvements, model, current_time, optimizer)
 
 
     def _save_checkpoint(self, model, current_version, filename, current_time, optimizer):
+        """ Save a checkpoint of the models """
+
         dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), \
                             '..', 'saved_models', current_time)
         if not os.path.exists(dir_path):
@@ -45,6 +50,8 @@ class Player:
 
 
     def load_models(self, path, models):
+        """ Load an already saved model """
+
         names = ["extractor", "policy_net", "value_net"]
         for i in range(0, len(models)):
             checkpoint = torch.load(os.path.join(path, models[i]))

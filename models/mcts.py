@@ -12,14 +12,12 @@ class Node():
 
 class MCTS():
 
-    def __init__(self, board, c_puct, value_net, policy_net):
+    def __init__(self, c_puct, extractor, value_net, policy_net):
+        self.extractor = extractor
         self.value_net = value_net
         self.policy_net = policy_net
         self.c_puct = c_puct
-        self.board = board
-    
 
-    
 
     def _puct(self, proba, total_count, count):
         """
@@ -47,7 +45,7 @@ class MCTS():
 
         return max(action_scores)
     
-    def search(self, actions):
+    def search(self, game):
         x = random.choice(actions)
         return x
 

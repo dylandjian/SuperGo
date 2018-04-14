@@ -1,6 +1,7 @@
 import re
 import string
 
+
 def pre_engine(s):
     s = re.sub("[^\t\n -~]", "", s)
     s = s.split("#")[0]
@@ -24,7 +25,7 @@ def gtp_list(l):
 
 def gtp_color(color):
     # an arbitrary choice amongst a number of possibilities
-    return {BLACK: "B", WHITE: "W"}[color]
+    return { BLACK: "B", WHITE: "W" }[color]
 
 
 def coord_to_gtp(coord, board_size):
@@ -41,6 +42,9 @@ def gtp_to_coord(gtp_coord, board_size):
 
     ## 97 to convert back to the position in the alphabet, then - 1 for index
     coord = gtp_coord.split()[1]
+    if coord == "pass":
+        return board_size ** 2
+
     x = "ABCDEFGHJKLMNOPQRSTYVWYZ".index(coord[0]) + 1
     y = board_size - int(coord[1])
     final_coord = y * board_size + x - 1
@@ -69,8 +73,8 @@ def parse_message(message):
     return message_id, command, arguments
 
 
-WHITE = -1
-BLACK = +1
+WHITE = 1
+BLACK = -1
 EMPTY = 0
 
 PASS = (0, 0)

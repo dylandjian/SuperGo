@@ -40,7 +40,7 @@ L2_REG = 0.0001
 ## Momentum
 MOMENTUM = 0.92
 ## Activate MCTS
-NO_MCTS = True
+MCTS_FLAG = False
 
 #####
 
@@ -76,7 +76,7 @@ ADAM = True
 ## Learning rate annealing factor
 LR_DECAY = 0.1
 ## Learning rate anmnealing interval
-LR_DECAY_ITE = 10 * TRAIN_STEPS
+LR_DECAY_ITE = 50 * TRAIN_STEPS
 
 #####
 

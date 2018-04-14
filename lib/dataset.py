@@ -9,25 +9,31 @@ class SelfPlayDataset(Dataset):
     and the winner of the game.
     """
 
-    def __init__(self):
+    def __init__(self, mcts_flag=MCTS_FLAG):
         """ Instanciate a dataset """
 
         self.states = np.zeros((MOVES, (HISTORY + 1) * 2 + 1, GOBAN_SIZE, GOBAN_SIZE))
-        if NO_MCTS:
+        self.mcts_flag = mcts_flag
+        if not mcts_flag:
             self.plays = np.zeros((MOVES, GOBAN_SIZE ** 2 + 1))
         else:
             self.plays = np.zeros(MOVES)
         self.winners = np.zeros(MOVES)
         self.current_len = 0
 
+
     def __len__(self):
         return self.current_len
+
 
     def __getitem__(self, idx):
         return self.states[idx], self.plays[idx], \
                self.winners[idx]
 
+
     def update(self, game):
+        """ Rotate the circular buffer to add new games at end """
+
         dataset = np.array(game[0])
         number_moves = dataset.shape[0]
         self.current_len = min(self.current_len + number_moves, MOVES)
@@ -36,7 +42,7 @@ class SelfPlayDataset(Dataset):
         self.states[:number_moves] = np.vstack(dataset[:,0])
 
         self.plays = np.roll(self.plays, number_moves, axis=0)
-        if NO_MCTS:
+        if not self.mcts_flag:
             self.plays[np.arange(number_moves),np.hstack(dataset[:,1])] = 1
         else:
             self.plays[:number_moves] = np.hstack(dataset[:,1])

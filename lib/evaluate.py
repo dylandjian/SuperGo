@@ -3,6 +3,9 @@ from const import *
 
 
 def evaluate(player, new_player):
+    """ Used to evaluate the best network against 
+        the newly trained model """ 
+
     print("[EVALUATION] Starting to evaluate trained model !")
     results = play(player, opponent=new_player)
     black_wins = 0
