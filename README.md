@@ -6,9 +6,9 @@ Ongoing project.
 
 # TODO (in order of priority)
 
-* Better Komi ?
 * File of constants that match the paper constants
 * OGS / KGS API
+* Better Komi ?
 * Use logging instead of prints ?
 
 # CURRENTLY DOING
@@ -19,15 +19,6 @@ Ongoing project.
   * Adaptative temperature (close to 1 during the first 30 moves of self-play, close to 0 after and during evaluation)
   * Dirichlet noise to prior probabilities in the rootnode
   * Multiprocessing of search
-
-# LONG TERM PLAN ?
-
-* Compile my own version of Sabaki to watch games automatically
-* Statistics
-* Optimization ?
-* Tromp Taylor scoring ?
-* Resignation ?
-* Training on a big computer / server once everything is ready ?
 
 # DONE
 
@@ -43,3 +34,12 @@ Ongoing project.
 * Dataset ring buffer of self-play games
 * Loading saved models
 * Database for self-play games
+
+# LONG TERM PLAN ?
+
+* Compile my own version of Sabaki to watch games automatically while traning
+* Statistics
+* Optimization ?
+* Tromp Taylor scoring ?
+* Resignation ?
+* Training on a big computer / server once everything is ready ?
