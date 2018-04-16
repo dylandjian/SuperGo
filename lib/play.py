@@ -184,24 +184,6 @@ class Game:
         else:
             self.player_color = 1
 
-
-    def _draw_move(self, action_scores, competitive=False):
-        """
-        Find the best move, either deterministically for competitive play
-        or stochiasticly according to some temperature constant
-        """
-
-        if competitive:
-            move = np.argmax(action_scores)
-
-        else:
-            action_scores = np.power(action_scores, (1. / TEMP))
-            total = np.sum(action_scores)
-            probas = action_scores / total
-            move = np.random.choice(action_scores.shape[0], p=probas)
-
-        return move
-    
     
     def _get_move(self, board, probas):
         """ Select a move without MCTS """
@@ -235,22 +217,22 @@ class Game:
     def _play(self, state, player):
         """ Choose a move depending on MCTS or not """
 
-        if not self.mcts_flag:
-            action_scores = player.mcts.search()
+        # if self.mcts_flag:
+        #     action_scores = player.mcts.search()
+        # else:
+        feature_maps = player.extractor(state)
+        probas = player.policy_net(feature_maps)[0] \
+                            .cpu().data.numpy()
+        if player.passed is True:
+            player_move = self.goban_size ** 2
         else:
-            feature_maps = player.extractor(state)
-            probas = player.policy_net(feature_maps)[0] \
-                                .cpu().data.numpy()
-            if player.passed is True:
-                player_move = self.goban_size ** 2
-            else:
-                player_move = self._get_move(self.board, probas)
+            player_move = self._get_move(self.board, probas)
 
-            if player_move == self.goban_size ** 2:
-                player.passed = True
+        if player_move == self.goban_size ** 2:
+            player.passed = True
 
-            state, reward, done = self.board.step(player_move)
-            return state, reward, done, player_move
+        state, reward, done = self.board.step(player_move)
+        return state, reward, done, player_move
 
 
     def __call__(self):

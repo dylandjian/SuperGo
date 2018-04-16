@@ -1,5 +1,8 @@
 import os
 from models.agent import Player
+import numpy as np
+from const import *
+import random
 
 
 def get_ite(folder_path, ite):
@@ -62,3 +65,25 @@ def get_player(current_time, improvements):
     player = Player()
     player.load_models(path, models)
     return player, improvements + 1
+
+
+def sample_rotation(state, num=8):
+    dh_group = [(0, 0) (np.rot90, 1), (np.rot90, 2), (np.rot90, 3), 
+                (np.fliplr, 0), (np.flipud, 0), (np.flipud,  (np.rot90, 1)), (np.fliplr, (np.rot90, 1))]
+
+    dh_group = random.shuffle(dh_group)
+    states = []
+    for i in num:
+        print(i)
+        assert 0
+    
+    return state
+
+
+if __name__ == "__main__":
+    pass
+
+
+
+
+

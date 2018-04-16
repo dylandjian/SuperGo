@@ -6,6 +6,8 @@ Ongoing project.
 
 # TODO (in order of priority)
 
+* Dihedral group of board for more training samples
+* Sample random rotation or reflection in dihedral group during MCTS
 * File of constants that match the paper constants
 * OGS / KGS API
 * Better Komi ?
@@ -13,12 +15,12 @@ Ongoing project.
 
 # CURRENTLY DOING
 
+* Brainlag on loss : cross entropy or KLDiv (crossentropy - entropy) ??
 * MCTS
   * Tree search
-  * Rotation of board for more training samples
   * Adaptative temperature (close to 1 during the first 30 moves of self-play, close to 0 after and during evaluation)
   * Dirichlet noise to prior probabilities in the rootnode
-  * Multiprocessing of search
+  * Multiprocessing of search ?
 
 # DONE
 

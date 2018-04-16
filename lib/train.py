@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn 
 import numpy as np
 import pickle
 import time
@@ -20,16 +21,18 @@ from lib.utils import load_player
 class AlphaLoss(torch.nn.Module):
     """ Custom loss as defined in the paper """
 
-    def __init__(self, mcts_flag=MCTS_FLAG):
-        self.mcts_flag = mcts_flag
+    def __init__(self):
         super(AlphaLoss, self).__init__()
+        self.log_softmax = nn.LogSoftmax()
 
+    # def forward(self, winner, self_play_winner, probas, self_play_probas):
+    #     value_error = F.mse_loss(winner, self_play_winner)
+    #     policy_error = torch.mean(torch.sum(-self_play_probas * self.log_softmax(probas), 1))
+    #     return value_error + policy_error
+        
     def forward(self, winner, self_play_winner, probas, self_play_probas):
         value_error = F.mse_loss(winner, self_play_winner)
-        if not self.mcts_flag:
-            policy_error = F.binary_cross_entropy(probas, self_play_probas)
-        else:
-            policy_error = F.cross_entropy(probas, self_play_probas)
+        policy_error = F.kl_div(probas, self_play_probas)
         return value_error + policy_error
 
 
@@ -167,11 +170,11 @@ def train(current_time, loaded_ite):
                 except KeyboardInterrupt:
                     client.close()
                     pool.terminate()
-
+            
             example = {
                 'state': Variable(state).type(DTYPE_FLOAT),
                 'winner': Variable(winner).type(DTYPE_FLOAT),
-                'move' : Variable(move).type(DTYPE_FLOAT if not MCTS_FLAG else DTYPE_LONG)
+                'move' : Variable(move).type(DTYPE_FLOAT if MCTS_FLAG else DTYPE_LONG)
             }
             loss = train_epoch(new_player, optimizer, example, criterion)
 

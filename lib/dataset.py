@@ -14,7 +14,7 @@ class SelfPlayDataset(Dataset):
 
         self.states = np.zeros((MOVES, (HISTORY + 1) * 2 + 1, GOBAN_SIZE, GOBAN_SIZE))
         self.mcts_flag = mcts_flag
-        if not mcts_flag:
+        if mcts_flag:
             self.plays = np.zeros((MOVES, GOBAN_SIZE ** 2 + 1))
         else:
             self.plays = np.zeros(MOVES)
@@ -42,7 +42,7 @@ class SelfPlayDataset(Dataset):
         self.states[:number_moves] = np.vstack(dataset[:,0])
 
         self.plays = np.roll(self.plays, number_moves, axis=0)
-        if not self.mcts_flag:
+        if self.mcts_flag:
             self.plays[np.arange(number_moves),np.hstack(dataset[:,1])] = 1
         else:
             self.plays[:number_moves] = np.hstack(dataset[:,1])
@@ -53,6 +53,7 @@ class SelfPlayDataset(Dataset):
         winners[np.where(winners != -1)] = 1
         self.winners[:number_moves] = winners
         return number_moves
+    
     
     def update_batch(self, raw_dataset):
         for game in raw_dataset:

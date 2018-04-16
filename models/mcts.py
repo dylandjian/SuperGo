@@ -8,6 +8,9 @@ class Node():
         self.n = 0
         self.w = 0
         self.q = 0
+    
+    def expand(self):
+        pass
 
 
 class MCTS():
@@ -17,6 +20,24 @@ class MCTS():
         self.value_net = value_net
         self.policy_net = policy_net
         self.c_puct = c_puct
+
+
+    def _draw_move(self, action_scores, competitive=False):
+        """
+        Find the best move, either deterministically for competitive play
+        or stochiasticly according to some temperature constant
+        """
+
+        if competitive:
+            move = np.argmax(action_scores)
+
+        else:
+            action_scores = np.power(action_scores, (1. / TEMP))
+            total = np.sum(action_scores)
+            probas = action_scores / total
+            move = np.random.choice(action_scores.shape[0], p=probas)
+
+        return move
 
 
     def _puct(self, proba, total_count, count):
@@ -30,7 +51,7 @@ class MCTS():
         return action_score
 
 
-    def select(self, nodes):
+    def _select(self, nodes):
         """
         Select the move that maximises the mean value of the next state +
         the result of the PUCT function
@@ -45,8 +66,8 @@ class MCTS():
 
         return max(action_scores)
     
-    def search(self, game):
-        x = random.choice(actions)
+
+    def search(self, game, competitive=False):
         return x
 
 
