@@ -28,7 +28,7 @@ LR = 0.01
 ## Number of epochs
 EPOCHS = 100
 ## Number of MCTS simulation
-MCTS_LOOK = 200
+MCTS_SIM = 200
 ## Temperature
 TEMP = 2
 ## Exploration constant
@@ -39,8 +39,10 @@ L2_REG = 0.0001
 MOMENTUM = 0.92
 ## Activate MCTS
 MCTS_FLAG = True
-## Alpha for Dirichlet noise
+## Epsilon for Dirichlet noise
 EPS = 0.25
+## Alpha for Dirichlet noise
+ALPHA = 0.03
 
 #####
 

@@ -2,14 +2,12 @@ import os
 from .feature import Extractor
 from .value import ValueNet
 from .policy import PolicyNet
-from .mcts import MCTS
 from const import *
 
 
 class Player:
 
-    def __init__(self, mcts_flag=MCTS_FLAG):
-        self.mcts_flag = mcts_flag
+    def __init__(self):
         if CUDA:
             self.extractor = Extractor(INPLANES, OUTPLANES_MAP).cuda()
             self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES).cuda()
@@ -19,8 +17,6 @@ class Player:
             self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES)
             self.policy_net = PolicyNet(OUTPLANES_MAP, OUTPLANES)    
         
-        if mcts_flag:
-            self.mcts = MCTS(C_PUCT, self.extractor, self.value_net, self.policy_net)
         self.passed = False
     
 

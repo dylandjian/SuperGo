@@ -174,7 +174,7 @@ def train(current_time, loaded_ite):
             example = {
                 'state': Variable(state).type(DTYPE_FLOAT),
                 'winner': Variable(winner).type(DTYPE_FLOAT),
-                'move' : Variable(move).type(DTYPE_FLOAT if MCTS_FLAG else DTYPE_LONG)
+                'move' : Variable(move).type(DTYPE_FLOAT)
             }
             loss = train_epoch(new_player, optimizer, example, criterion)
 

@@ -20,7 +20,7 @@ Ongoing project.
   * Tree search
   * Adaptative temperature (close to 1 during the first 30 moves of self-play, close to 0 after and during evaluation)
   * Dirichlet noise to prior probabilities in the rootnode
-  * Multiprocessing of search ?
+  * Multithreading of search (cant multiprocess because of virtual loss, but useless in Python) ?
 
 # DONE
 

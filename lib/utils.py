@@ -3,6 +3,20 @@ from models.agent import Player
 import numpy as np
 from const import *
 import random
+import torch
+from torch.autograd import Variable
+
+
+
+def _prepare_state(state):
+    """
+    Transform the numpy state into a PyTorch tensor with cuda
+    if available
+    """
+
+    x = torch.from_numpy(np.array([state]))
+    x = Variable(x).type(DTYPE_FLOAT)
+    return x
 
 
 def get_ite(folder_path, ite):

@@ -1,4 +1,5 @@
 import pachi_py
+from copy import deepcopy
 import numpy as np
 import sys
 import six
@@ -74,10 +75,10 @@ class GoEnv():
     def _get_komi(self, board_size):
         """ Initialize a komi depending on the size of the board """
 
-        if board_size == 19:
+        if 14 <= board_size <= 19:
             return 7.5
-        elif board_size == 13:
-            return 4.5
+        elif 9 <= board_size <= 13:
+            return 5.5
         return 0
     
 
@@ -87,8 +88,14 @@ class GoEnv():
         legal_moves = self.board.get_legal_coords(self.player_color, filter_suicides=True)
         final_moves = []
 
-        for move in legal_moves:
-            final_moves.append(_coord_to_action(self.board, move)) 
+        for pachi_move in legal_moves:
+            move = _coord_to_action(self.board, pachi_move)
+            if self.test_move(move):
+                final_moves.append(move)
+        
+        if len(final_moves) == 0:
+            return [self.board_size ** 2]
+
         return final_moves
 
 
@@ -156,13 +163,21 @@ class GoEnv():
 
         assert self.board.is_terminal
         self.done = True
-        score = self.board.official_score
-        if self.board_size == 13:
-            score += 4.5
-        elif self.board_size == 19:
-            score += 7.5
+        score = self.board.official_score + self.komi
 
         white_wins = self.board.official_score > 0
         black_wins = self.board.official_score < 0
         reward = 1 if white_wins else 0
         return _format_state(self.history, self.player_color, self.board_size), reward, True
+
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == "board":
+                setattr(result, k, self.board.clone())
+            else:
+                setattr(result, k, deepcopy(v, memo))
+        return result

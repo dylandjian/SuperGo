@@ -7,11 +7,12 @@ import time
 import os
 from copy import deepcopy
 from models.agent import Player
+from models.mcts import MCTS
 from .go import GoEnv as Board
 from const import *
 from pymongo import MongoClient
 from torch.autograd import Variable
-from .utils import get_player, load_player
+from .utils import get_player, load_player, _prepare_state
 
 
 def add_games(queue, player, opponent, match_number, cores):
@@ -147,13 +148,20 @@ class Game:
     """ A single process that is used to play a game between 2 agents """
 
     def __init__(self, player, id, color="black", mcts_flag=MCTS_FLAG, goban_size=GOBAN_SIZE, opponent=False):
-        self.mcts_flag = mcts_flag
         self.goban_size = goban_size
         self.id = id + 1
-        self.player = player
-        self.opponent = opponent
         self.board = self._create_board(color)
         self.player_color = 2 if color == "black" else 1
+        if mcts_flag:
+            if opponent:
+                self.player = (player, MCTS(player, competitive=True))
+                self.opponent = (opponent, MCTS(player, competitive=True))
+            else:
+                self.player = (player, MCTS(player))
+                self.opponent = False
+        else:
+            self.player = (player, False)
+            self.opponent = False
     
 
     def _create_board(self, color):
@@ -165,17 +173,6 @@ class Game:
         board = Board(color, self.goban_size)
         board.reset()
         return board
-    
-
-    def _prepare_state(self, state):
-        """
-        Transform the numpy state into a PyTorch tensor with cuda
-        if available
-        """
-
-        x = torch.from_numpy(np.array([state]))
-        x = Variable(x).type(DTYPE_FLOAT)
-        return x
     
 
     def _swap_color(self):
@@ -193,23 +190,12 @@ class Game:
         can_pass = False
         legal_moves = board.get_legal_moves()
 
-        while valid_move is False and can_pass is False:
-            if (len(legal_moves) == 1 and \
-                legal_moves[0] == self.goban_size ** 2) or len(legal_moves) == 0:
-                can_pass = True
-                player_move = self.goban_size ** 2
-
-            if player_move is not None: 
-                valid_move = board.test_move(player_move)
-                if valid_move is False and can_pass is False:
-                    legal_moves.remove(player_move)
-
-            while player_move not in legal_moves and len(legal_moves) > 0:
-                player_move = np.random.choice(probas.shape[0], p=probas)
-                if player_move not in legal_moves:
-                    old_proba = probas[player_move]
-                    probas = probas + (old_proba / (probas.shape[0] - 1))
-                    probas[player_move] = 0
+        while player_move not in legal_moves and len(legal_moves) > 0:
+            player_move = np.random.choice(probas.shape[0], p=probas)
+            if player_move not in legal_moves:
+                old_proba = probas[player_move]
+                probas = probas + (old_proba / (probas.shape[0] - 1))
+                probas[player_move] = 0
 
         return player_move
 
@@ -217,22 +203,25 @@ class Game:
     def _play(self, state, player):
         """ Choose a move depending on MCTS or not """
 
-        # if self.mcts_flag:
-        #     action_scores = player.mcts.search()
-        # else:
-        feature_maps = player.extractor(state)
-        probas = player.policy_net(feature_maps)[0] \
-                            .cpu().data.numpy()
-        if player.passed is True:
-            player_move = self.goban_size ** 2
+        if player[1]:
+            action_scores, action = player[1].search(self.board)
         else:
-            player_move = self._get_move(self.board, probas)
+            feature_maps = player.extractor(state)
+            probas = player.policy_net(feature_maps)[0] \
+                                .cpu().data.numpy()
+            if player.passed is True:
+                player_move = self.goban_size ** 2
+            else:
+                player_move = self._get_move(self.board, probas)
 
-        if player_move == self.goban_size ** 2:
-            player.passed = True
+            if player_move == self.goban_size ** 2:
+                player.passed = True
+
+            action_scores = np.zeros((self.goban_size ** 2 + 1),)
+            action_scores[player_move] = 1
 
         state, reward, done = self.board.step(player_move)
-        return state, reward, done, player_move
+        return state, reward, done, action_scores
 
 
     def __call__(self):
@@ -248,22 +237,23 @@ class Game:
         moves = 0
 
         while not done:
-
             ## Prevent cycling in 2 atari situations
             if moves > 60 * self.goban_size:
                 return False
 
             ## For evaluation
             if self.opponent:
-                state, reward, done, _ = self._play(self._prepare_state(state), self.player)
-                state, reward, done, _ = self._play(self._prepare_state(state), self.opponent)
+                state, reward, done, _ = self._play(_prepare_state(state), \
+                                                self.player)
+                state, reward, done, _ = self._play(_prepare_state(state), \
+                                                self.opponent)
                 moves += 2
             ## For self-play
             else:
-                state = self._prepare_state(state)
-                new_state, reward, done, player_move = self._play(state, self.player)
+                state = _prepare_state(state)
+                new_state, reward, done, probas = self._play(state, self.player)
                 self._swap_color()
-                dataset.append((state.cpu().data.numpy(), player_move, \
+                dataset.append((state.cpu().data.numpy(), probas, \
                                 self.player_color))
                 state = new_state 
                 moves += 1
@@ -280,7 +270,7 @@ class Game:
 
         ## Agent plays the first move of the game
         if move is None:
-            state = self._prepare_state(self.board.state)
+            state = _prepare_state(self.board.state)
             state, reward, done, player_move = self._play(state, self.player)
             self._swap_color()
             return player_move
@@ -293,4 +283,5 @@ class Game:
 
     def reset(self):
         state = self.board.reset()
+    
 
