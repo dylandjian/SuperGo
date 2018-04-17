@@ -45,3 +45,13 @@ Ongoing project.
 * Tromp Taylor scoring ?
 * Resignation ?
 * Training on a big computer / server once everything is ready ?
+
+# Resources
+
+* [Official AlphaGo Zero paper](https://www.nature.com/articles/nature24270.epdf?author_access_token=VJXbVjaSHxFoctQQ4p2k4tRgN0jAjWel9jnR3ZoTv0PVW4gB86EEpGqTRDtpIz-2rmo8-KG06gqVobU5NSCFeHILHcVFUeMsbvwS-lxjqQGg98faovwjxeTUgZAUMnRQ)
+* Custom environment implementation using [pachi_py](https://github.com/openai/pachi-py/tree/master/pachi_py) following the implementation that was originally made on [OpenAI Gym](https://github.com/openai/gym/blob/6af4a5b9b2755606c4e0becfe1fc876d33130526/gym/envs/board_game/go.py)
+* Using [PyTorch](https://github.com/pytorch/pytorch) for the neural networks
+* Using [Sabaki](https://github.com/SabakiHQ/Sabaki) for the GUI
+* [General scheme, cool design](https://applied-data.science/static/main/res/alpha_go_zero_cheat_sheet.png)
+* [Monte Carlo tree search explaination](https://int8.io/monte-carlo-tree-search-beginners-guide/)
+* [Nice tree search implementation](https://github.com/blanyal/alpha-zero/blob/master/mcts.py)
