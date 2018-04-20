@@ -1,20 +1,20 @@
 #!/home/dylan/.virtualenvs/superGo/bin/python
 
-from pymongo import MongoClient
 import numpy as np
 import re
 import pickle
 import sys
 import click
 from lib.gtp import format_success, parse_message
+from pymongo import MongoClient
 
 
 def game_to_gtp(game):
     """ Take a game from the database and convert it to send GTP instructions """
 
     moves = np.array(game[0])[:,[1,2]]
-    boardsize = np.sqrt(np.max(moves[:,0]))
-    current_move = 0
+    boardsize = int(np.sqrt(moves[0][0].shape[0]))
+    move_count = 0
 
     ## Wait for input
     while True:
@@ -24,14 +24,16 @@ def game_to_gtp(game):
             break
 
         if "genmove" in command:
-            if current_move < moves.shape[0]:
-                x = moves[current_move][0]
-                if x == boardsize ** 2:
+            if move_count < moves.shape[0]:
+                move = np.where(moves[move_count][0] == 1.0)[0][0]
+                if move == boardsize ** 2:
                     print(format_success(None, response="pass"))
                 else:
                     print(format_success(None, response="{}{}".format("ABCDEFGHJKLMNOPQRSTYVWYZ"\
-                            [int(x % boardsize)], int(boardsize - x // boardsize))))
-                current_move += 1
+                            [int(move % boardsize)], int(boardsize - move // boardsize))))
+                move_count += 1
+            else:
+                print('?name    %s    ???\n\n' % (command))
         elif "name" in command:
             print(format_success(None, response="test"))
         else:

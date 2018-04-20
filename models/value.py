@@ -15,7 +15,7 @@ class ValueNet(nn.Module):
         super(ValueNet, self).__init__()
         self.outplanes = outplanes
         self.conv = nn.Conv2d(inplanes, 1, kernel_size=1)
-        self.conv_bn = nn.BatchNorm2d(1)
+        self.bn = nn.BatchNorm2d(1)
         self.fc1 = nn.Linear(outplanes - 1, 256)
         self.fc2 = nn.Linear(256, 1)
         
@@ -27,7 +27,7 @@ class ValueNet(nn.Module):
                   considering the actual state of the board
         """
  
-        x = F.relu(self.conv_bn(self.conv(x)))
+        x = F.relu(self.bn(self.conv(x)))
         x = x.view(-1, self.outplanes - 1)
         x = F.relu(self.fc1(x))
         winning = F.tanh(self.fc2(x))

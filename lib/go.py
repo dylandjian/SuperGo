@@ -90,7 +90,7 @@ class GoEnv():
 
         for pachi_move in legal_moves:
             move = _coord_to_action(self.board, pachi_move)
-            if self.test_move(move):
+            if move != 81 or self.test_move(move):
                 final_moves.append(move)
         
         if len(final_moves) == 0:
@@ -172,6 +172,9 @@ class GoEnv():
 
 
     def __deepcopy__(self, memo):
+        """ Used to overwrite the deepcopy implicit method since
+            the board cannot be deepcopied """
+
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result

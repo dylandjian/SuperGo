@@ -20,28 +20,24 @@ class Player:
         self.passed = False
     
 
-    def save_models(self, improvements, current_time, optimizer=None):
+    def save_models(self, state, current_time):
         """ Save the models """
 
         for model in ["extractor", "policy_net", "value_net"]:
-            self._save_checkpoint(getattr(self, model),\
-                                improvements, model, current_time, optimizer)
+            self._save_checkpoint(getattr(self, model), model,\
+                                state, current_time)
 
 
-    def _save_checkpoint(self, model, current_version, filename, current_time, optimizer):
+    def _save_checkpoint(self, model, filename, state, current_time):
         """ Save a checkpoint of the models """
 
         dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), \
                             '..', 'saved_models', current_time)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-        state = {
-            'state_dict': model.state_dict(),
-            'version': current_version,
-        }
-        if optimizer:
-            state['optimizer'] = optimizer.state_dict(),
-        filename = os.path.join(dir_path, "{}-{}.pth.tar".format(current_version, filename))
+
+        filename = os.path.join(dir_path, "{}-{}.pth.tar".format(state['version'], filename))
+        state['model'] = model.state_dict()
         torch.save(state, filename)
 
 
@@ -52,5 +48,6 @@ class Player:
         for i in range(0, len(models)):
             checkpoint = torch.load(os.path.join(path, models[i]))
             model = getattr(self, names[i])
-            model.load_state_dict(checkpoint["state_dict"])
+            model.load_state_dict(checkpoint['model'])
+            return checkpoint
 

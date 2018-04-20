@@ -46,7 +46,7 @@ def create_matches(player, opponent=None, cores=1, match_number=10):
 
 
 
-def self_play(current_time, ite):
+def self_play(current_time, loaded_version):
     """
     Used to create a learning dataset for the value and policy network.
     Play against itself and backtrack the winner to maximize winner moves
@@ -56,21 +56,25 @@ def self_play(current_time, ite):
     client = MongoClient()
     collection = client.superGo[current_time]
     game_id = 0
-    improvements = 1
+    current_version = 1
     player = False
 
     while True:
 
         ## Load the player when restarting traning
-        if ite:
-            new_player, improvements = load_player(current_time, ite)
+        if loaded_version:
+            new_player, checkpoint = load_player(current_time, 
+                                                loaded_version)
             game_id = collection.find().count()
-            ite = False
+            current_version = checkpoint['version'] + 1
+            loaded_version = False
         else:
-            new_player, improvements = get_player(current_time, improvements)
+            new_player, checkpoint = get_player(current_time, current_version)
+            if new_player:
+                current_version = checkpoint['version'] + 1
 
-        print("[PLAY] Current improvement level: %d" % improvements)
-        if improvements == 1 and not player and not new_player:
+        print("[PLAY] Current improvement level: %d" % current_version)
+        if current_version == 1 and not player and not new_player:
             print("[PLAY] Waiting for first player")
             time.sleep(5)
             continue
@@ -92,7 +96,6 @@ def self_play(current_time, ite):
                 game_id += 1
         print("[PLAY] Done fetching")
         queue.close()
-        time.sleep(15)
 
 
 def play(player, opponent):
@@ -152,17 +155,11 @@ class Game:
         self.id = id + 1
         self.board = self._create_board(color)
         self.player_color = 2 if color == "black" else 1
+        self.mcts = mcts_flag
         if mcts_flag:
-            if opponent:
-                self.player = (player, MCTS(player, competitive=True))
-                self.opponent = (opponent, MCTS(player, competitive=True))
-            else:
-                self.player = (player, MCTS(player))
-                self.opponent = False
-        else:
-            self.player = (player, False)
-            self.opponent = False
-    
+            self.mcts = MCTS()
+        self.player = player
+        self.opponent = opponent
 
     def _create_board(self, color):
         """
@@ -200,28 +197,39 @@ class Game:
         return player_move
 
 
-    def _play(self, state, player):
+    def _play(self, state, player, other_pass, competitive=False):
         """ Choose a move depending on MCTS or not """
 
-        if player[1]:
-            action_scores, action = player[1].search(self.board)
+        if self.mcts:
+            if player.passed is True or other_pass:
+                action_scores = np.zeros((self.goban_size ** 2 + 1,))
+                action_scores[-1] = 1
+                action = self.goban_size ** 2
+            else:
+                action_scores, action = self.mcts.search(self.board, player,\
+                                             competitive=competitive)
+
+            if action == self.goban_size ** 2:
+                player.passed = True
+            
         else:
             feature_maps = player.extractor(state)
             probas = player.policy_net(feature_maps)[0] \
                                 .cpu().data.numpy()
             if player.passed is True:
-                player_move = self.goban_size ** 2
+                action = self.goban_size ** 2
             else:
-                player_move = self._get_move(self.board, probas)
+                action = self._get_move(self.board, probas)
 
-            if player_move == self.goban_size ** 2:
+            if action == self.goban_size ** 2:
                 player.passed = True
 
             action_scores = np.zeros((self.goban_size ** 2 + 1),)
-            action_scores[player_move] = 1
+            action_scores[action] = 1
 
-        state, reward, done = self.board.step(player_move)
-        return state, reward, done, action_scores
+        state, reward, done = self.board.step(action)
+        self.board.render()
+        return state, reward, done, action_scores, action
 
 
     def __call__(self):
@@ -235,23 +243,28 @@ class Game:
         state = self.board.reset()
         dataset = []
         moves = 0
+        comp = False
 
         while not done:
             ## Prevent cycling in 2 atari situations
-            if moves > 60 * self.goban_size:
+            if moves > MOVE_LIMIT:
                 return False
+            
+            if moves > MOVE_LIMIT / 24:
+                comp = True
 
             ## For evaluation
             if self.opponent:
-                state, reward, done, _ = self._play(_prepare_state(state), \
-                                                self.player)
-                state, reward, done, _ = self._play(_prepare_state(state), \
-                                                self.opponent)
+                state, reward, done, _, action = self._play(_prepare_state(state), \
+                                                self.player, self.opponent.passed, competitive=True)
+                state, reward, done, _, action = self._play(_prepare_state(state), \
+                                                self.opponent, self.player.passed, competitive=True)
                 moves += 2
+
             ## For self-play
             else:
                 state = _prepare_state(state)
-                new_state, reward, done, probas = self._play(state, self.player)
+                new_state, reward, done, probas, _ = self._play(state, self.player, False, competitive=comp)
                 self._swap_color()
                 dataset.append((state.cpu().data.numpy(), probas, \
                                 self.player_color))
@@ -260,7 +273,9 @@ class Game:
             
         ## Pickle the result because multiprocessing
         if self.opponent:
+            self.opponent.passed = False
             return pickle.dumps([reward])
+        self.player.passed = False
         return pickle.dumps((dataset, reward))
 
     
@@ -271,9 +286,9 @@ class Game:
         ## Agent plays the first move of the game
         if move is None:
             state = _prepare_state(self.board.state)
-            state, reward, done, player_move = self._play(state, self.player)
+            state, reward, done, probas, move = self._play(state, self.player)
             self._swap_color()
-            return player_move
+            return move
         ## Otherwise just play a move and answer it
         else:
             state, reward, done = self.board.step(move)

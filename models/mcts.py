@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from copy import deepcopy
 import random
 from const import *
@@ -6,26 +7,26 @@ from lib.utils import _prepare_state
 
 class Node():
 
-    def __init__(self, parent=None, probas=None):
+    def __init__(self, parent=None, proba=None, move=None):
         """
         p : probability of reaching that node, given by the policy net
         n : number of time this node has been visited during simulations
         w : total action value, given by the value network
         q : mean action value (w / n)
         """
-        self.p = probas
+        self.p = proba
         self.n = 0
         self.w = 0
         self.q = 0
-        self.childrens = None
-        self.move = None
+        self.childrens = []
+        self.parent = parent
+        self.move = move
     
-
     def update(self, v):
         """ Update the node statistics after a playout """
 
-        self.n += 1
-        self.w += v
+        self.n = self.n + 1
+        self.w = self.w + v
         self.q = self.w / self.n
 
 
@@ -37,96 +38,125 @@ class Node():
         return True
 
 
-    def expand(self):
-        pass
+    def expand(self, probas):
+        self.childrens = [Node(parent=self, move=idx, proba=probas[idx]) \
+                    for idx in range(probas.shape[0]) if probas[idx] > 0]
 
 
 class MCTS():
 
-    def __init__(self, player, competitive=False):
+    def __init__(self):
         self.root = Node()
-        self.player = player
-        self.temp = TEMP
-        self.competitive = competitive
 
 
-    def _draw_move(self, action_scores):
+    def _draw_move(self, action_scores, competitive=False):
         """
         Find the best move, either deterministically for competitive play
         or stochiasticly according to some temperature constant
         """
 
-        if self.competitive:
+        if competitive:
             move = np.argmax(action_scores)
+            total = np.sum(action_scores)
+            probas = action_scores / total
 
         else:
-            action_scores = np.power(action_scores, (1. / self.temp))
             total = np.sum(action_scores)
             probas = action_scores / total
             move = np.random.choice(action_scores.shape[0], p=probas)
 
-        return move
+        return move, probas
 
 
-    def _puct(self, proba, total_count, count, c_puct=C_PUCT):
-        """
-        Function of P and N that increases if an action hasn't been explored
-        much, relative to the other actions, or if the prior probability of the
-        action is high, according to the paper
-        """
-        action_score = c_puct * proba 
-        action_score *= (np.sqrt(total_count) / (1 + count))
-        return action_score
-
-
-    def _select(self, nodes):
+    @profile
+    def _select(self, nodes, c_puct=C_PUCT):
         """
         Select the move that maximises the mean value of the next state +
         the result of the PUCT function
         """
 
-        action_scores = []
-        total_count = sum([node.visit_count for node in nodes])
+        total_count = sum([node.n for node in nodes])
 
-        for node in nodes:
-            action_score = node.q + self._puct(node.p, total_count, node.n)
-            action_scores.append(action_score)
-
-        return max(action_scores)
+        sqrt = np.sqrt
+        action_scores = np.array([node.q + c_puct * node.p * \
+                    (sqrt(total_count) / (1 + node.n)) for node in nodes])
+        
+        equals = np.where(action_scores == np.max(action_scores))[0]
+        if equals.shape[0] > 0:
+            return nodes[np.random.choice(equals)]
+        return nodes[equals[0]]
     
 
     def dirichlet_noise(self, probas):
-        probas = probas.cpu().data.numpy()
-        dim = (probas.shape[1],)
+        dim = (probas.shape[0],)
         new_probas = (1 - EPS) * probas + \
                      EPS * np.random.dirichlet(np.full(dim, ALPHA))
         return new_probas
 
 
+    def advance(self, move):
+        print('target: ', move)
+        for i in range(len(self.root.childrens)):
+            print(self.root.childrens[i].move)
+            if self.root.childrens[i].move == move:
+                final_idx = i
+        self.root = self.root.childrens[final_idx]
 
-    def search(self, current_game, competitive=False):
+
+    @profile
+    def search(self, current_game, player, competitive=False):
         for sim in range(MCTS_SIM):
             game = deepcopy(current_game)
             state = game.state
             current_node = self.root
+            done = False
 
-            mov = 0
-            while not current_node.is_leaf():
+            while not current_node.is_leaf() and not done:
                 current_node = self._select(current_node.childrens)
-                state, _, _ = game.step(current_node.move)
-                mov += 1
-            
-            state = _prepare_state(state)
-            probas = self.player.policy_net(self.player.extractor(state))
+                state, _, done = game.step(current_node.move)
 
-            if mov == 0:
-                probas = self.dirichlet_noise(probas)
-            
-            valid_moves = current_game.get_legal_moves()
-            probas[np.setdiff1d(np.arange(probas.shape[0]), np.array(valid_moves))] = 0
-            total = np.sum(probas)
-            probas /= total
+            ## Predict the probas
+            if not done:
+                state = _prepare_state(state)
+                feature_maps = player.extractor(state)
 
-        return self._draw_move(action_scores)
+                ## Policy and value prediction
+                probas = player.policy_net(feature_maps)
+                probas = probas.cpu().data.numpy()[0]
+                v = player.value_net(feature_maps)
+
+                ## Add noise in the root node
+                if not current_node.parent:
+                    probas = self.dirichlet_noise(probas)
+                
+                ## Modify probability vector depending on valid moves
+                valid_moves = game.get_legal_moves()
+                illegal_moves = np.setdiff1d(np.arange(game.board_size ** 2 + 1),
+                                             np.array(valid_moves))
+                probas[illegal_moves] = 0
+                total = np.sum(probas)
+                probas /= total
+
+                current_node.expand(probas)
+
+                ## Backpropagate the result of the simulation
+                while current_node.parent:
+                    current_node.update(float(v))
+                    current_node = current_node.parent
+            else:
+                probas = np.zeros((game.board_size ** 2 + 1, ))
+                probas[-1] = 1.
+
+        action_scores = np.zeros((game.board_size ** 2 + 1,))
+        for node in self.root.childrens:
+            action_scores[node.move] = node.n
+        final_move, final_probas = self._draw_move(action_scores, competitive=competitive)
+
+        for i in range(len(self.root.childrens)):
+            if self.root.childrens[i].move == final_move:
+                final_idx = i
+
+        self.root = self.root.childrens[final_idx]
+        return final_probas, final_move
 
 

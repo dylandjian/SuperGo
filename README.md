@@ -6,8 +6,9 @@ Ongoing project.
 
 # TODO (in order of priority)
 
-* Dihedral group of board for more training samples
-* Sample random rotation or reflection in dihedral group during MCTS
+* Optimization ?
+* MCTS
+  * Multithreading of search (cant multiprocess because of virtual loss, but useless in Python) ?
 * File of constants that match the paper constants
 * OGS / KGS API
 * Better Komi ?
@@ -16,14 +17,15 @@ Ongoing project.
 # CURRENTLY DOING
 
 * Brainlag on loss : cross entropy or KLDiv (crossentropy - entropy) ??
-* MCTS
-  * Tree search
-  * Adaptative temperature (close to 1 during the first 30 moves of self-play, close to 0 after and during evaluation)
-  * Dirichlet noise to prior probabilities in the rootnode
-  * Multithreading of search (cant multiprocess because of virtual loss, but useless in Python) ?
+* Dihedral group of board for more training samples
+* Sample random rotation or reflection in dihedral group during MCTS
 
 # DONE
 
+* MCTS
+  * Tree search
+  * Dirichlet noise to prior probabilities in the rootnode
+  * Adaptative temperature (either take max or proportionally)
 * Learning without MCTS doesnt seem to work
 * Resume training
 * GTP on trained models (human.py, to plug with Sabaki)
@@ -41,7 +43,6 @@ Ongoing project.
 
 * Compile my own version of Sabaki to watch games automatically while traning
 * Statistics
-* Optimization ?
 * Tromp Taylor scoring ?
 * Resignation ?
 * Training on a big computer / server once everything is ready ?

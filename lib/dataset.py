@@ -2,6 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 from const import *
 import numpy as np
 import timeit
+from . import utils
 
 class SelfPlayDataset(Dataset):
     """
@@ -23,8 +24,11 @@ class SelfPlayDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        return self.states[idx], self.plays[idx], \
+        
+        return utils.sample_rotation(self.states[idx]), self.plays[idx], \
                self.winners[idx]
+        # return self.states[idx], self.plays[idx], \
+        #        self.winners[idx]
 
 
     def update(self, game):

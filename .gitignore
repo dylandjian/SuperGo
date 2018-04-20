@@ -2,7 +2,6 @@ __pycache__
 data/*
 Sabaki/
 *.pyc
-test.py
 saved_models/
 *.py.lprof
 pytorch/
