@@ -24,11 +24,8 @@ class SelfPlayDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        
-        return utils.sample_rotation(self.states[idx]), self.plays[idx], \
-               self.winners[idx]
-        # return self.states[idx], self.plays[idx], \
-        #        self.winners[idx]
+        states = utils.sample_rotation(self.states[idx]) 
+        return utils.formate_state(states, self.plays[idx], self.winners[idx])
 
 
     def update(self, game):

@@ -81,6 +81,7 @@ def get_player(current_time, version):
     return player, checkpoint
 
 
+# @profile
 def sample_rotation(state, num=8):
     dh_group = [(None, None), ((np.rot90, 1), None), ((np.rot90, 2), None),
                 ((np.rot90, 3), None), (np.fliplr, None), (np.flipud, None),
@@ -102,7 +103,16 @@ def sample_rotation(state, num=8):
         new_state[boards] = state[boards]
         states.append(new_state)
     
+    if len(states) == 1:
+        return np.array(states[0])
     return np.array(states)
+
+
+def formate_state(state, probas, winner):
+    probas = np.reshape(probas, (1, probas.shape[0]))
+    probas = np.repeat(probas, 8, axis=0)
+    winner = np.full((8, 1), winner)
+    return state, probas, winner
 
 
 if __name__ == "__main__":

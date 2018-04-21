@@ -228,7 +228,6 @@ class Game:
             action_scores[action] = 1
 
         state, reward, done = self.board.step(action)
-        self.board.render()
         return state, reward, done, action_scores, action
 
 

@@ -25,7 +25,7 @@ class AlphaLoss(torch.nn.Module):
 
     def __init__(self):
         super(AlphaLoss, self).__init__()
-        self.log_softmax = nn.LogSoftmax()
+    #     self.log_softmax = nn.LogSoftmax()
 
     # def forward(self, winner, self_play_winner, probas, self_play_probas):
     #     value_error = F.mse_loss(winner, self_play_winner)
@@ -53,8 +53,8 @@ def fetch_new_games(collection, dataset, last_id):
         added_games += 1
 
         ## You cant replace more than 40% of the dataset at a time
-        # if added_moves > MOVES * 0.4:
-        #     break
+        if added_moves >= MOVES * 0.4:
+            break
     
     print("[TRAIN] Last id: %d, added games: %d, added moves: %d"\
                     % (last_id, added_games, added_moves))
@@ -64,20 +64,17 @@ def fetch_new_games(collection, dataset, last_id):
 def train_epoch(player, optimizer, example, criterion):
     """ Used to train the 3 models over a single batch """
 
+    optimizer.zero_grad()
+    feature_maps = player.extractor(example['state'])
+    winner = player.value_net(feature_maps)
+    probas = player.policy_net(feature_maps)
 
-    ## STATE : BATCH_SIZE x 8 x 17 x 9 x 9
-    for idx in range(8):
-        optimizer.zero_grad()
-        print(example['state'][idx].size())
-        feature_maps = player.extractor(example['state'][idx])
-        winner = player.value_net(feature_maps)
-        probas = player.policy_net(feature_maps)
+    loss = criterion(winner, example['winner'], \
+                        probas, example['move'])
+    loss.backward()
+    optimizer.step()
 
-        loss = criterion(winner.view(-1), example['winner'], probas, example['move'])
-        loss.backward()
-        optimizer.step()
-
-    return loss
+    return float(loss)
 
 
 def update_lr(lr, total_ite, lr_decay=LR_DECAY, lr_decay_ite=LR_DECAY_ITE):
@@ -98,6 +95,20 @@ def create_state(current_version, lr, total_ite, current_ite):
         'current_ite': current_ite
     }
     return state
+
+
+def collate_fn(example):
+    state = []
+    probas = []
+    winner = []
+    for ex in example:
+        state.extend(ex[0])
+        probas.extend(ex[1])
+        winner.extend(ex[2])
+    state = torch.tensor(state).type(DTYPE_FLOAT)
+    probas = torch.tensor(probas).type(DTYPE_FLOAT)
+    winner = torch.tensor(winner).type(DTYPE_FLOAT)
+    return state, probas, winner
 
 
 def train(current_time, loaded_version):
@@ -149,7 +160,8 @@ def train(current_time, loaded_version):
 
     print("[TRAIN] Circular buffer full !")
     print("[TRAIN] Starting to train !")
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    dataloader = DataLoader(dataset, collate_fn=collate_fn, \
+                batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
 
     while True:
         if update:
@@ -162,15 +174,17 @@ def train(current_time, loaded_version):
                         list(new_player.policy_net.parameters()) +\
                         list(new_player.value_net.parameters())
             if ADAM:
-                optimizer = torch.optim.Adam(joint_params, lr=lr, weight_decay=L2_REG)
+                optimizer = torch.optim.Adam(joint_params, lr=lr, \
+                                            weight_decay=L2_REG)
             else:
                 optimizer = torch.optim.SGD(joint_params, lr=lr, \
-                                                weight_decay=L2_REG, momentum=MOMENTUM)
+                                weight_decay=L2_REG, momentum=MOMENTUM)
             current_ite = 1
             update = False
     
         for batch_idx, (state, move, winner) in enumerate(dataloader):
 
+            loss = []
             ## Force the network to stop training the current network
             ## since the new one is better (from the callback)
             if update:
@@ -201,12 +215,13 @@ def train(current_time, loaded_version):
                 'winner': Variable(winner).type(DTYPE_FLOAT),
                 'move' : Variable(move).type(DTYPE_FLOAT)
             }
-            loss = train_epoch(new_player, optimizer, example, criterion)
+            loss.append(train_epoch(new_player, optimizer, example, criterion))
 
-            if current_ite % 10 == 0:
-                print("[TRAIN] batch index: %d loss: %.3f"\
-                        % (batch_idx / 10, loss))
-            if total_ite % 100 == 0:
+            if current_ite % LOSS_TICK == 0:
+                print("[TRAIN] current iteration: %d, averaged loss: %.3f"\
+                        % (batch_idx / 10, np.mean(loss)))
+                loss = []
+            if total_ite % REFRESH_TICK == 0:
                 last_id = fetch_new_games(collection, dataset, last_id)
             
             current_ite += 1

@@ -28,7 +28,7 @@ def main(folder, version):
     signal.signal(signal.SIGINT, original_sigint_handler)
 
     try:
-        # self_play_proc = pool.apply_async(self_play, args=(current_time, version,))
+        self_play_proc = pool.apply_async(self_play, args=(current_time, version,))
         train_proc = pool.apply_async(train, args=(current_time, version,))
 
         ## Comment one line or the other to get the stack trace

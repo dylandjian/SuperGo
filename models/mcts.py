@@ -1,9 +1,11 @@
 import numpy as np
+from numba import jit
 import time
 from copy import deepcopy
 import random
 from const import *
-from lib.utils import _prepare_state
+from lib.utils import _prepare_state, sample_rotation
+
 
 class Node():
 
@@ -22,11 +24,12 @@ class Node():
         self.parent = parent
         self.move = move
     
+
     def update(self, v):
         """ Update the node statistics after a playout """
 
         self.n = self.n + 1
-        self.w = self.w + v
+        self.w = self.w + float(v)
         self.q = self.w / self.n
 
 
@@ -42,6 +45,23 @@ class Node():
         self.childrens = [Node(parent=self, move=idx, proba=probas[idx]) \
                     for idx in range(probas.shape[0]) if probas[idx] > 0]
 
+    
+@jit
+def _opt_select(nodes, c_puct):
+    total_count = 0
+    for i in range(nodes.shape[0]):
+        total_count += nodes[i][1]
+    
+    action_scores = np.zeros(nodes.shape[0])
+    for i in range(nodes.shape[0]):
+        action_scores[i] = nodes[i][0] + c_puct * nodes[i][2] * \
+                (np.sqrt(total_count) / (1 + nodes[i][1]))
+    
+    equals = np.where(action_scores == np.max(action_scores))[0]
+    if equals.shape[0] > 0:
+        return np.random.choice(equals)
+    return equals[0]
+
 
 class MCTS():
 
@@ -56,7 +76,8 @@ class MCTS():
         """
 
         if competitive:
-            move = np.argmax(action_scores)
+            moves = np.where(action_scores == np.max(action_scores))[0]
+            move = np.random.choice(moves)
             total = np.sum(action_scores)
             probas = action_scores / total
 
@@ -68,23 +89,13 @@ class MCTS():
         return move, probas
 
 
-    @profile
     def _select(self, nodes, c_puct=C_PUCT):
         """
         Select the move that maximises the mean value of the next state +
         the result of the PUCT function
         """
 
-        total_count = sum([node.n for node in nodes])
-
-        sqrt = np.sqrt
-        action_scores = np.array([node.q + c_puct * node.p * \
-                    (sqrt(total_count) / (1 + node.n)) for node in nodes])
-        
-        equals = np.where(action_scores == np.max(action_scores))[0]
-        if equals.shape[0] > 0:
-            return nodes[np.random.choice(equals)]
-        return nodes[equals[0]]
+        return nodes[_opt_select(np.array([[node.q, node.n, node.p] for node in nodes]), c_puct)]
     
 
     def dirichlet_noise(self, probas):
@@ -94,16 +105,6 @@ class MCTS():
         return new_probas
 
 
-    def advance(self, move):
-        print('target: ', move)
-        for i in range(len(self.root.childrens)):
-            print(self.root.childrens[i].move)
-            if self.root.childrens[i].move == move:
-                final_idx = i
-        self.root = self.root.childrens[final_idx]
-
-
-    @profile
     def search(self, current_game, player, competitive=False):
         for sim in range(MCTS_SIM):
             game = deepcopy(current_game)
@@ -117,7 +118,7 @@ class MCTS():
 
             ## Predict the probas
             if not done:
-                state = _prepare_state(state)
+                state = _prepare_state(sample_rotation(state, num=1))
                 feature_maps = player.extractor(state)
 
                 ## Policy and value prediction
@@ -141,7 +142,7 @@ class MCTS():
 
                 ## Backpropagate the result of the simulation
                 while current_node.parent:
-                    current_node.update(float(v))
+                    current_node.update(v)
                     current_node = current_node.parent
             else:
                 probas = np.zeros((game.board_size ** 2 + 1, ))
@@ -152,6 +153,8 @@ class MCTS():
             action_scores[node.move] = node.n
         final_move, final_probas = self._draw_move(action_scores, competitive=competitive)
 
+        # print(final_move, final_probas)
+        # print()
         for i in range(len(self.root.childrens)):
             if self.root.childrens[i].move == final_move:
                 final_idx = i

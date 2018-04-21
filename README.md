@@ -6,8 +6,8 @@ Ongoing project.
 
 # TODO (in order of priority)
 
-* Optimization ?
 * MCTS
+  * Optimization ? (already done some Numba, cant go down much further I think)
   * Multithreading of search (cant multiprocess because of virtual loss, but useless in Python) ?
 * File of constants that match the paper constants
 * OGS / KGS API
@@ -17,8 +17,7 @@ Ongoing project.
 # CURRENTLY DOING
 
 * Brainlag on loss : cross entropy or KLDiv (crossentropy - entropy) ??
-* Dihedral group of board for more training samples
-* Sample random rotation or reflection in dihedral group during MCTS
+* Loss doesn't decrease :( still trying to see if it learns something on 9x9 with 50 simulations !
 
 # DONE
 
@@ -26,6 +25,8 @@ Ongoing project.
   * Tree search
   * Dirichlet noise to prior probabilities in the rootnode
   * Adaptative temperature (either take max or proportionally)
+  * Sample random rotation or reflection in the dihedral group
+* Dihedral group of board for more training samples
 * Learning without MCTS doesnt seem to work
 * Resume training
 * GTP on trained models (human.py, to plug with Sabaki)

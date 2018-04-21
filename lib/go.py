@@ -90,7 +90,7 @@ class GoEnv():
 
         for pachi_move in legal_moves:
             move = _coord_to_action(self.board, pachi_move)
-            if move != 81 or self.test_move(move):
+            if move != self.board_size ** 2 or self.test_move(move):
                 final_moves.append(move)
         
         if len(final_moves) == 0:
@@ -115,10 +115,10 @@ class GoEnv():
             depending on the current score """
 
         board_clone = self.board.clone()
-        current_score = board_clone.official_score  + self.komi
+        current_score = board_clone.fast_score  + self.komi
 
         board_clone = board_clone.play(_action_to_coord(board_clone, action), self.player_color)
-        new_score = board_clone.official_score + self.komi
+        new_score = board_clone.fast_score + self.komi
 
         if self.player_color - 1 == 0 and new_score >= current_score \
            or self.player_color - 1 == 1 and new_score <= current_score:
@@ -163,10 +163,10 @@ class GoEnv():
 
         assert self.board.is_terminal
         self.done = True
-        score = self.board.official_score + self.komi
+        score = self.board.fast_score + self.komi
 
-        white_wins = self.board.official_score > 0
-        black_wins = self.board.official_score < 0
+        white_wins = self.board.fast_score > 0
+        black_wins = self.board.fast_score < 0
         reward = 1 if white_wins else 0
         return _format_state(self.history, self.player_color, self.board_size), reward, True
 
