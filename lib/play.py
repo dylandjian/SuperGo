@@ -263,10 +263,11 @@ class Game:
             ## For self-play
             else:
                 state = _prepare_state(state)
-                new_state, reward, done, probas, _ = self._play(state, self.player, False, competitive=comp)
+                new_state, reward, done, probas, action = self._play(state, self.player, \
+                                                            False, competitive=comp)
                 self._swap_color()
                 dataset.append((state.cpu().data.numpy(), probas, \
-                                self.player_color))
+                                self.player_color, action))
                 state = new_state 
                 moves += 1
             

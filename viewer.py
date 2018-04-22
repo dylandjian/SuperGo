@@ -9,11 +9,11 @@ from lib.gtp import format_success, parse_message
 from pymongo import MongoClient
 
 
-def game_to_gtp(game):
+def game_to_gtp(game, game_id, collection):
     """ Take a game from the database and convert it to send GTP instructions """
 
-    moves = np.array(game[0])[:,[1,2]]
-    boardsize = int(np.sqrt(moves[0][0].shape[0]))
+    board_size = int(np.sqrt(len(game[0][0][1]) - 1))
+    moves = np.array(game[0])[:,3]
     move_count = 0
 
     ## Wait for input
@@ -25,17 +25,17 @@ def game_to_gtp(game):
 
         if "genmove" in command:
             if move_count < moves.shape[0]:
-                move = np.where(moves[move_count][0] == 1.0)[0][0]
-                if move == boardsize ** 2:
+                move = moves[move_count]
+                if move == board_size ** 2:
                     print(format_success(None, response="pass"))
                 else:
                     print(format_success(None, response="{}{}".format("ABCDEFGHJKLMNOPQRSTYVWYZ"\
-                            [int(move % boardsize)], int(boardsize - move // boardsize))))
+                            [int(move % board_size)], int(board_size - move // board_size))))
                 move_count += 1
             else:
                 print('?name    %s    ???\n\n' % (command))
         elif "name" in command:
-            print(format_success(None, response="test"))
+            print(format_success(None, response="folder {}, game id: {}".format(collection, game_id)))
         else:
             print('?name    %s    ???\n\n' % (command))
 
@@ -61,7 +61,7 @@ def main(folder):
         ## Get the latest game
         last_game = game_collection.find().sort('_id', -1).limit(2).next()
         final_game = pickle.loads(last_game['game'])
-        game_to_gtp(final_game)
+        game_to_gtp(final_game, last_game['id'], collection)
 
 if __name__ == "__main__":
     main()

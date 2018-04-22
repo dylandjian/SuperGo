@@ -16,6 +16,8 @@ Ongoing project.
 
 # CURRENTLY DOING
 
+* Do something about the process leaking
+* Clean code, create install script, write documentation
 * Brainlag on loss : cross entropy or KLDiv (crossentropy - entropy) ??
 * Loss doesn't decrease :( still trying to see if it learns something on 9x9 with 50 simulations !
 

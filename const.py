@@ -28,7 +28,7 @@ HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 50
+MCTS_SIM = 40
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
@@ -68,7 +68,7 @@ OUTPLANES = (GOBAN_SIZE ** 2) + 1
 ## Number of residual blocks
 BLOCKS = 10
 ## Number of training step before evaluating
-TRAIN_STEPS = 20 * BATCH_SIZE
+TRAIN_STEPS = 5 * BATCH_SIZE
 ## Optimizer
 ADAM = False
 ## Learning rate annealing factor
