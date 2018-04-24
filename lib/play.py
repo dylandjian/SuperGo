@@ -84,8 +84,9 @@ def self_play(current_time, loaded_version):
             print("[PLAY] New player !")
 
         queue, results = create_matches(player , \
-                    cores=PARRALEL_SELF_PLAY, match_number=SELF_PLAY_MATCH) 
+                    cores=PARALLEL_SELF_PLAY, match_number=SELF_PLAY_MATCH) 
         print("[PLAY] Starting to fetch fresh games")
+        queue.join()
         for _ in range(SELF_PLAY_MATCH):
             result = results.get()
             if result:
@@ -96,23 +97,27 @@ def self_play(current_time, loaded_version):
                 game_id += 1
         print("[PLAY] Done fetching")
         queue.close()
+        results.close()
 
 
 def play(player, opponent):
     """ Game between two players, for evaluation """
 
     queue, results = create_matches(deepcopy(player), opponent=deepcopy(opponent), \
-                cores=PARRALEL_EVAL, match_number=EVAL_MATCHS) 
-    queue.join()
-    
-    print("[EVALUATION] Starting to fetch fresh games")
-    final_result = []
-    for _ in range(EVAL_MATCHS):
-        result = results.get()
-        if result:
-            final_result.append(pickle.loads(result))
-    print("[EVALUATION] Done fetching")
-    queue.close()
+                cores=PARALLEL_EVAL, match_number=EVAL_MATCHS) 
+    try:
+        queue.join()
+        
+        print("[EVALUATION] Starting to fetch fresh games")
+        final_result = []
+        for idx in range(EVAL_MATCHS):
+            result = results.get()
+            if result:
+                final_result.append(pickle.loads(result))
+        print("[EVALUATION] Done fetching")
+    finally:
+        queue.close()
+        results.close()
     return final_result
 
 
@@ -128,21 +133,25 @@ class GameManager(multiprocessing.Process):
         self.game_queue = game_queue
         self.result_queue = result_queue
 
+
     def run(self):
         """ Execute a task from the game_queue """
 
         process_name = self.name
         while True:
-            next_task = self.game_queue.get()
+            try:
+                next_task = self.game_queue.get(600000)
 
-            ## End the processes that are done
-            if next_task is None:
+                ## End the processes that are done
+                if next_task is None:
+                    self.game_queue.task_done()
+                    break
+
+                answer = next_task()
                 self.game_queue.task_done()
-                break
-
-            answer = next_task()
-            self.game_queue.task_done()
-            self.result_queue.put(answer)
+                self.result_queue.put(answer)
+            except Exception as e:
+                print("xd")
 
 
 
@@ -153,6 +162,7 @@ class Game:
     def __init__(self, player, id, color="black", mcts_flag=MCTS_FLAG, goban_size=GOBAN_SIZE, opponent=False):
         self.goban_size = goban_size
         self.id = id + 1
+        self.human_pass = False
         self.board = self._create_board(color)
         self.player_color = 2 if color == "black" else 1
         self.mcts = mcts_flag
@@ -196,7 +206,7 @@ class Game:
 
         return player_move
 
-
+    # @profile
     def _play(self, state, player, other_pass, competitive=False):
         """ Choose a move depending on MCTS or not """
 
@@ -247,7 +257,8 @@ class Game:
         while not done:
             ## Prevent cycling in 2 atari situations
             if moves > MOVE_LIMIT:
-                return False
+                print("cc")
+                return pickle.dumps((dataset, self.board.get_winner()))
             
             if moves > MOVE_LIMIT / 24:
                 comp = True
@@ -273,6 +284,7 @@ class Game:
             
         ## Pickle the result because multiprocessing
         if self.opponent:
+            print("[EVALUATION] Match %d done in eval" % self.id)
             self.opponent.passed = False
             return pickle.dumps([reward])
         self.player.passed = False
@@ -286,12 +298,16 @@ class Game:
         ## Agent plays the first move of the game
         if move is None:
             state = _prepare_state(self.board.state)
-            state, reward, done, probas, move = self._play(state, self.player)
+            state, reward, done, probas, move = self._play(state, self.player, self.human_pass, competitive=True)
             self._swap_color()
             return move
         ## Otherwise just play a move and answer it
         else:
             state, reward, done = self.board.step(move)
+            if move != self.board.board_size ** 2:
+                self.mcts.advance(move)
+            else:
+                self.human_pass = True
             self._swap_color()
             return True
     

@@ -145,6 +145,15 @@ class GoEnv():
         return outfile
 
 
+    def get_winner(self):
+        score = self.board.fast_score + self.komi
+
+        white_wins = self.board.fast_score > 0
+        black_wins = self.board.fast_score < 0
+        reward = 1 if white_wins else 0
+        return reward
+    
+
     def step(self, action):
         """ Perfoms an action and choose the winner if the 2 player
             have passed """
@@ -163,11 +172,7 @@ class GoEnv():
 
         assert self.board.is_terminal
         self.done = True
-        score = self.board.fast_score + self.komi
-
-        white_wins = self.board.fast_score > 0
-        black_wins = self.board.fast_score < 0
-        reward = 1 if white_wins else 0
+        reward = self.get_winner()
         return _format_state(self.history, self.player_color, self.board_size), reward, True
 
 

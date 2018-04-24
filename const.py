@@ -9,12 +9,11 @@ CUDA = torch.cuda.is_available()
 DTYPE_FLOAT = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
 DTYPE_LONG = torch.cuda.LongTensor if CUDA else torch.LongTensor
 ## Number of self-play parallel games
-PARRALEL_SELF_PLAY = 3
-## Number of evaluation parralel games 
-PARRALEL_EVAL = 2
+PARALLEL_SELF_PLAY = 2
+## Number of evaluation parallel games 
+PARALLEL_EVAL = 2
 ## MCTS parallel
-MCTS_PARRALEL = 1
-####
+MCTS_PARALLEL = 2
 
 
 ##### GLOBAL
@@ -22,13 +21,13 @@ MCTS_PARRALEL = 1
 ## Size of the Go board
 GOBAN_SIZE = 9
 ## Number of move to end a game
-MOVE_LIMIT = GOBAN_SIZE ** 2 * 2.5
+MOVE_LIMIT = GOBAN_SIZE ** 2
 ## Number of last states to keep
 HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 40
+MCTS_SIM = 5
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
@@ -41,16 +40,10 @@ MCTS_FLAG = True
 EPS = 0.25
 ## Alpha for Dirichlet noise
 ALPHA = 0.03
-
-#####
-
-
-##### SELF-PLAY
-
+## Batch size for evaluation during MCTS
+BATCH_SIZE_EVAL = 2
 ## Number of self-play before training
-SELF_PLAY_MATCH = 2 * PARRALEL_SELF_PLAY
-
-#####
+SELF_PLAY_MATCH = 2 * PARALLEL_SELF_PLAY
 
 
 ##### TRAINING
@@ -68,7 +61,7 @@ OUTPLANES = (GOBAN_SIZE ** 2) + 1
 ## Number of residual blocks
 BLOCKS = 10
 ## Number of training step before evaluating
-TRAIN_STEPS = 5 * BATCH_SIZE
+TRAIN_STEPS = 7 * BATCH_SIZE
 ## Optimizer
 ADAM = False
 ## Learning rate annealing factor
@@ -80,8 +73,6 @@ LOSS_TICK = BATCH_SIZE // 4
 ## Refresh the dataset
 REFRESH_TICK = BATCH_SIZE
 
-#####
-
 
 ##### EVALUATION
 
@@ -90,6 +81,3 @@ REFRESH_TICK = BATCH_SIZE
 EVAL_MATCHS = 21
 ## Threshold to keep the new neural net
 EVAL_THRESH = 0.55
-
-
-#####

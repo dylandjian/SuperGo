@@ -6,16 +6,13 @@ Ongoing project.
 
 # TODO (in order of priority)
 
-* MCTS
-  * Optimization ? (already done some Numba, cant go down much further I think)
-  * Multithreading of search (cant multiprocess because of virtual loss, but useless in Python) ?
 * File of constants that match the paper constants
 * OGS / KGS API
-* Better Komi ?
 * Use logging instead of prints ?
 
 # CURRENTLY DOING
 
+* Optimization
 * Do something about the process leaking
 * Clean code, create install script, write documentation
 * Brainlag on loss : cross entropy or KLDiv (crossentropy - entropy) ??
@@ -23,11 +20,13 @@ Ongoing project.
 
 # DONE
 
+* Game that are longer than the threshold of games are now used
 * MCTS
   * Tree search
   * Dirichlet noise to prior probabilities in the rootnode
   * Adaptative temperature (either take max or proportionally)
   * Sample random rotation or reflection in the dihedral group
+  * Multithreading of search (kinda badly implemented for now)
 * Dihedral group of board for more training samples
 * Learning without MCTS doesnt seem to work
 * Resume training
@@ -38,6 +37,7 @@ Ongoing project.
 * Multiprocessing of games for self-play and evaluation
 * Models and training without MCTS
 * Evaluation
+* Tromp Taylor scoring
 * Dataset ring buffer of self-play games
 * Loading saved models
 * Database for self-play games
@@ -46,7 +46,6 @@ Ongoing project.
 
 * Compile my own version of Sabaki to watch games automatically while traning
 * Statistics
-* Tromp Taylor scoring ?
 * Resignation ?
 * Training on a big computer / server once everything is ready ?
 
@@ -59,3 +58,23 @@ Ongoing project.
 * [General scheme, cool design](https://applied-data.science/static/main/res/alpha_go_zero_cheat_sheet.png)
 * [Monte Carlo tree search explaination](https://int8.io/monte-carlo-tree-search-beginners-guide/)
 * [Nice tree search implementation](https://github.com/blanyal/alpha-zero/blob/master/mcts.py)
+
+# Statistics
+
+## For a 10 layers deep Resnet evaluated on 5 games
+
+### 9x9 board
+
+* 0.1947162s / move - 0.003894324s / simulation with 2 threads and 2 batch_size_eval with 50 simulations
+* 0.1360865s / move - 0.00272173s / simulation 4 threads 4 batch_size_eval 50 simulations
+* 0.1222489s / move - 0.002444978s / simulation 8 threads 8 batch_size eval 50 simulations
+
+### 19x19 board
+
+* 0.6306054s / move - 0.012612108s / simulation with 2 threads and 2 batch_size_eval with 50 simulations
+
+# Differences with the official paper
+
+* No resignation
+* PyTorch instead of Tensorflow
+* Python instead of (probably) C++ / C

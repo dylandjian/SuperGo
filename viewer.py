@@ -9,12 +9,13 @@ from lib.gtp import format_success, parse_message
 from pymongo import MongoClient
 
 
-def game_to_gtp(game, game_id, collection):
+def game_to_gtp(game, game_id, collection_name):
     """ Take a game from the database and convert it to send GTP instructions """
 
     board_size = int(np.sqrt(len(game[0][0][1]) - 1))
     moves = np.array(game[0])[:,3]
     move_count = 0
+    game_winner = game[1]
 
     ## Wait for input
     while True:
@@ -35,14 +36,16 @@ def game_to_gtp(game, game_id, collection):
             else:
                 print('?name    %s    ???\n\n' % (command))
         elif "name" in command:
-            print(format_success(None, response="folder {}, game id: {}".format(collection, game_id)))
+            print(format_success(None, response="folder {}, game id: {}, winner: {}"\
+                                    .format(collection_name, game_id, game_winner)))
         else:
             print('?name    %s    ???\n\n' % (command))
 
 
 @click.command()
 @click.option("--folder", default=-1)
-def main(folder):
+@click.option("--game_id", default=-1)
+def main(folder, game_id):
     ## Init Mongo
     client = MongoClient()
     db = client.superGo
@@ -59,9 +62,17 @@ def main(folder):
         game_collection = db[collection]
 
         ## Get the latest game
-        last_game = game_collection.find().sort('_id', -1).limit(2).next()
-        final_game = pickle.loads(last_game['game'])
-        game_to_gtp(final_game, last_game['id'], collection)
+        if game_id == -1:
+            last_game = game_collection.find().sort('_id', -1).limit(1)
+        else:
+            last_game = game_collection.find({"id": game_id})
+        if last_game.count() == 0:
+            print("Wrong game_id or the database superGo doesnt have any collections")
+        else:
+            for game in last_game:
+                final_game = pickle.loads(game['game'])
+                game_to_gtp(final_game, game['id'], collection)
+                break
 
 if __name__ == "__main__":
     main()

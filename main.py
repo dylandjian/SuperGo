@@ -32,14 +32,14 @@ def main(folder, version):
         train_proc = pool.apply_async(train, args=(current_time, version,))
 
         ## Comment one line or the other to get the stack trace
-        # self_play_proc.get()
-        train_proc.get()
+        self_play_proc.get(60000000)
+        train_proc.get(60000000)
 
     except KeyboardInterrupt:
         pool.terminate()
     else:
         pool.close()
-    pool.join()
+        pool.join()
 
 if __name__ == "__main__":
     main()
