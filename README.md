@@ -13,6 +13,8 @@ Ongoing project.
 # CURRENTLY DOING
 
 * Optimization
+* MCTS
+  * Improving the multithreading of the search
 * Do something about the process leaking
 * Clean code, create install script, write documentation
 * Brainlag on loss : cross entropy or KLDiv (crossentropy - entropy) ??
@@ -20,13 +22,14 @@ Ongoing project.
 
 # DONE
 
-* Game that are longer than the threshold of games are now used
+* Game that are longer than the threshold of moves are now used
 * MCTS
   * Tree search
   * Dirichlet noise to prior probabilities in the rootnode
   * Adaptative temperature (either take max or proportionally)
   * Sample random rotation or reflection in the dihedral group
   * Multithreading of search (kinda badly implemented for now)
+  * Batch size evaluation to save computation
 * Dihedral group of board for more training samples
 * Learning without MCTS doesnt seem to work
 * Resume training
