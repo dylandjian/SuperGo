@@ -86,18 +86,20 @@ def self_play(current_time, loaded_version):
         queue, results = create_matches(player , \
                     cores=PARALLEL_SELF_PLAY, match_number=SELF_PLAY_MATCH) 
         print("[PLAY] Starting to fetch fresh games")
-        queue.join()
-        for _ in range(SELF_PLAY_MATCH):
-            result = results.get()
-            if result:
-                collection.insert({
-                    "game": result,
-                    "id": game_id
-                })
-                game_id += 1
-        print("[PLAY] Done fetching")
-        queue.close()
-        results.close()
+        try:
+            queue.join()
+            for _ in range(SELF_PLAY_MATCH):
+                result = results.get()
+                if result:
+                    collection.insert({
+                        "game": result,
+                        "id": game_id
+                    })
+                    game_id += 1
+            print("[PLAY] Done fetching")
+        finally:
+            queue.close()
+            results.close()
 
 
 def play(player, opponent):
@@ -257,9 +259,9 @@ class Game:
         while not done:
             ## Prevent cycling in 2 atari situations
             if moves > MOVE_LIMIT:
-                print("cc")
                 return pickle.dumps((dataset, self.board.get_winner()))
             
+            ## Magic ratio for adaptative temperature
             if moves > MOVE_LIMIT / 24:
                 comp = True
 
@@ -287,6 +289,7 @@ class Game:
             print("[EVALUATION] Match %d done in eval" % self.id)
             self.opponent.passed = False
             return pickle.dumps([reward])
+
         self.player.passed = False
         return pickle.dumps((dataset, reward))
 

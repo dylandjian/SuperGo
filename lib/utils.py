@@ -81,8 +81,9 @@ def get_player(current_time, version):
     return player, checkpoint
 
 
-# @profile
 def sample_rotation(state, num=8):
+    """ Apply a certain number of random transformation to the input state """
+
     dh_group = [(None, None), ((np.rot90, 1), None), ((np.rot90, 2), None),
                 ((np.rot90, 3), None), (np.fliplr, None), (np.flipud, None),
                 (np.flipud,  (np.rot90, 1)), (np.fliplr, (np.rot90, 1))]
@@ -109,15 +110,10 @@ def sample_rotation(state, num=8):
 
 
 def formate_state(state, probas, winner):
+    """ Repeat the probas and the winner to make every example identical after
+        the dihedral rotation have been applied """
+
     probas = np.reshape(probas, (1, probas.shape[0]))
     probas = np.repeat(probas, 8, axis=0)
     winner = np.full((8, 1), winner)
     return state, probas, winner
-
-
-if __name__ == "__main__":
-    pass
-
-
-
-

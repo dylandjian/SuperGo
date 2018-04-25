@@ -13,7 +13,7 @@ PARALLEL_SELF_PLAY = 2
 ## Number of evaluation parallel games 
 PARALLEL_EVAL = 2
 ## MCTS parallel
-MCTS_PARALLEL = 2
+MCTS_PARALLEL = 16
 
 
 ##### GLOBAL
@@ -21,13 +21,13 @@ MCTS_PARALLEL = 2
 ## Size of the Go board
 GOBAN_SIZE = 9
 ## Number of move to end a game
-MOVE_LIMIT = GOBAN_SIZE ** 2
+MOVE_LIMIT = GOBAN_SIZE ** 2 * 2.5
 ## Number of last states to keep
 HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 5
+MCTS_SIM = 64
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
@@ -41,7 +41,7 @@ EPS = 0.25
 ## Alpha for Dirichlet noise
 ALPHA = 0.03
 ## Batch size for evaluation during MCTS
-BATCH_SIZE_EVAL = 2
+BATCH_SIZE_EVAL = 4
 ## Number of self-play before training
 SELF_PLAY_MATCH = 2 * PARALLEL_SELF_PLAY
 

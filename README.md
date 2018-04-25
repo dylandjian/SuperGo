@@ -70,7 +70,8 @@ Ongoing project.
 
 * 0.1947162s / move - 0.003894324s / simulation with 2 threads and 2 batch_size_eval with 50 simulations
 * 0.1360865s / move - 0.00272173s / simulation 4 threads 4 batch_size_eval 50 simulations
-* 0.1222489s / move - 0.002444978s / simulation 8 threads 8 batch_size eval 50 simulations
+* 0.1222489s / move - 0.002444978s / simulation 8 threads 8 batch_size_eval 50 simulations
+* 0.1372498 / move - 0.00214452812s / simulations 16 threads 16 batch_size_eval 64 simulations
 
 ### 19x19 board
 

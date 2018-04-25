@@ -171,6 +171,7 @@ def train(current_time, loaded_version):
             print("[EVALUATION] New best player saved !")
         else:
             nonlocal last_id
+            ## Force a new fetch in case the player didnt improve
             last_id = fetch_new_games(collection, dataset, last_id)
 
     ## Wait before the circular before is full
@@ -186,12 +187,10 @@ def train(current_time, loaded_version):
     while True:
         batch_loss = []
         for batch_idx, (state, move, winner) in enumerate(dataloader):
-
             running_loss = []
-            ## Force the network to stop training the current network
-            ## since the new one is better (from the callback)
-
             lr, optimizer = update_lr(lr, optimizer, total_ite)
+    
+            ## Evaluate a copy of the current network asynchronously
             if total_ite % TRAIN_STEPS == 0:
                 pending_player = deepcopy(player)
                 last_id = fetch_new_games(collection, dataset, last_id)
@@ -206,7 +205,6 @@ def train(current_time, loaded_version):
                     pool.apply_async(evaluate, args=(pending_player, best_player), \
                             callback=new_agent)
                 except Exception as e:
-                    print(e)
                     client.close()
                     pool.terminate()
             
