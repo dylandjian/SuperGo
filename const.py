@@ -6,14 +6,13 @@ import multiprocessing
 ## CUDA variable from Torch
 CUDA = torch.cuda.is_available()
 ## Dtype of the tensors depending on CUDA
-DTYPE_FLOAT = torch.cuda.FloatTensor if CUDA else torch.FloatTensor
-DTYPE_LONG = torch.cuda.LongTensor if CUDA else torch.LongTensor
+DEVICE = torch.device("cuda") if CUDA else torch.device("cpu")
 ## Number of self-play parallel games
-PARALLEL_SELF_PLAY = 2
+PARALLEL_SELF_PLAY = 3
 ## Number of evaluation parallel games 
 PARALLEL_EVAL = 2
 ## MCTS parallel
-MCTS_PARALLEL = 16
+MCTS_PARALLEL = 4
 
 
 ##### GLOBAL
@@ -61,13 +60,13 @@ OUTPLANES = (GOBAN_SIZE ** 2) + 1
 ## Number of residual blocks
 BLOCKS = 10
 ## Number of training step before evaluating
-TRAIN_STEPS = 7 * BATCH_SIZE
+TRAIN_STEPS = 6 * BATCH_SIZE
 ## Optimizer
 ADAM = False
 ## Learning rate annealing factor
 LR_DECAY = 0.1
 ## Learning rate annnealing interval
-LR_DECAY_ITE = 50 * TRAIN_STEPS
+LR_DECAY_ITE = 100 * TRAIN_STEPS
 ## Print the loss
 LOSS_TICK = BATCH_SIZE // 4
 ## Refresh the dataset
@@ -78,6 +77,6 @@ REFRESH_TICK = BATCH_SIZE
 
 ## Number of matches against its old version to evaluate
 ## the newly trained network
-EVAL_MATCHS = 21
+EVAL_MATCHS = 20
 ## Threshold to keep the new neural net
 EVAL_THRESH = 0.55

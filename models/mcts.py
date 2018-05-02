@@ -81,54 +81,46 @@ def _opt_select(nodes, c_puct):
 
 
 class EvaluatorThread(threading.Thread):
-    def __init__(self, player, eval_queue, result_queue, condition_search, condition_eval, condition_mix):
+    def __init__(self, player, eval_queue, condition_search, condition_eval):
         threading.Thread.__init__(self)
         self.eval_queue = eval_queue
-        self.result_queue = result_queue
         self.player = player
         self.condition_search = condition_search
         self.condition_eval = condition_eval
-        self.condition_mix = condition_mix
 
     def run(self):
         total_sim = MCTS_SIM
         while total_sim > 0:
-            self.condition_eval.acquire()
-            while (len(self.eval_queue.values()) < BATCH_SIZE_EVAL or \
-                  len(self.result_queue.values()) > 0):
-                print("notifying in evaluator, current len: %d" % len(self.eval_queue.values()))
-                self.condition_eval.wait()
-            self.condition_eval.release()
+            self.condition_search.acquire()
+            while (len(self.eval_queue.values()) != BATCH_SIZE_EVAL or \
+                  (len(self.eval_queue.values()) < BATCH_SIZE_EVAL and \
+                   len(self.eval_queue.values()) != total_sim)) or \
+                  (len(self.eval_queue.values()) == BATCH_SIZE_EVAL and \
+                  not all(isinstance(state, np.ndarray) for state in self.eval_queue.values())):
+                self.condition_search.wait()
 
+            self.condition_search.release()
+            self.condition_eval.acquire()
             states = []
             for idx, state in self.eval_queue.items():
                 states.append(sample_rotation(state, num=1))
-            print('states len: %d' % len(states))
             states = _prepare_state(states)
             feature_maps = self.player.extractor(states[0])
 
             ## Policy and value prediction
             probas = self.player.policy_net(feature_maps)
             v = self.player.value_net(feature_maps)
-            keys = list(self.eval_queue.keys())
-            idx = 0
-            for key in keys:
-                self.result_queue[key] = (probas[idx].cpu().data.numpy(), float(v[idx]))
-                del self.eval_queue[key]
-                idx += 1
-            del probas, v, feature_maps
-            self.condition_mix.acquire()
-            self.condition_mix.notifyAll()
-            self.condition_mix.release()
+            for idx in range(BATCH_SIZE_EVAL):
+                self.eval_queue[idx] = (probas[idx].cpu().data.numpy(), v[idx])
+            self.condition_eval.notifyAll()
+            self.condition_eval.release()
             total_sim -= BATCH_SIZE_EVAL
 
 
 
 class SearchThread(threading.Thread):
-    def __init__(self, mcts, game, eval_queue, result_queue, thread_id, \
-                lock, condition_search, condition_eval, condition_mix):
+    def __init__(self, mcts, game, eval_queue, thread_id, lock, condition_search, condition_eval):
         threading.Thread.__init__(self)
-        self.result_queue = result_queue
         self.eval_queue = eval_queue
         self.mcts = mcts
         self.game = game
@@ -136,7 +128,6 @@ class SearchThread(threading.Thread):
         self.thread_id = thread_id
         self.condition_eval = condition_eval
         self.condition_search = condition_search
-        self.condition_mix = condition_mix
     
 
     def run(self):
@@ -155,25 +146,18 @@ class SearchThread(threading.Thread):
         ## Predict the probas
         if not done:
             self.condition_search.acquire()
-            while len(self.eval_queue.values()) < BATCH_SIZE_EVAL and \
-                  len(self.result_queue.values()) == 0:
-                print("trying to release in thread id %d" % self.thread_id)
-                self.condition_search.wait()
-            print("added move in thread %d" % self.thread_id)
-            self.condition_search.release()
-            
             self.eval_queue[self.thread_id] = state
+            self.condition_search.notify()
+
+            self.condition_search.release()
             self.condition_eval.acquire()
-            self.condition_eval.notify()
+            self.condition_eval.wait()
+
+            res = self.eval_queue[self.thread_id]
+            probas = np.array(res[0])
+            v = float(res[1])
             self.condition_eval.release()
 
-            self.condition_mix.acquire()
-            self.condition_mix.wait()
-            self.condition_mix.release()
-
-            probas = np.array(self.result_queue[self.thread_id][0], copy=True)
-            v = float(self.result_queue[self.thread_id][1])
-            del self.result_queue[self.thread_id]
 
             ## Add noise in the root node
             if not current_node.parent:
@@ -195,7 +179,7 @@ class SearchThread(threading.Thread):
                 current_node.update(v)
                 current_node = current_node.parent
             self.lock.release()
-            print("done in thread id %d" % self.thread_id)
+
 
 
 class MCTS:
@@ -238,18 +222,15 @@ class MCTS:
         threads = []
         condition_eval = threading.Condition()
         condition_search = threading.Condition()
-        condition_mix = threading.Condition()
         lock = threading.Lock()
         eval_queue = {}
-        result_queue = {}
-        evaluator = EvaluatorThread(player, eval_queue, result_queue, condition_search, \
-                                    condition_eval, condition_mix)
+        evaluator = EvaluatorThread(player, eval_queue, condition_search, condition_eval)
         evaluator.start()
         for sim in range(MCTS_SIM // MCTS_PARALLEL):
             eval_queue.clear()
             for idx in range(MCTS_PARALLEL):
-                threads.append(SearchThread(self, current_game, eval_queue, result_queue, idx, 
-                                        lock, condition_search, condition_eval, condition_mix))
+                threads.append(SearchThread(self, current_game, eval_queue, idx, 
+                                        lock, condition_search, condition_eval))
                 threads[-1].start()
             for thread in threads:
                 thread.join()
@@ -265,7 +246,6 @@ class MCTS:
                 break
 
         self.root = self.root.childrens[idx]
-        print(final_probas, final_move)
         return final_probas, final_move
 
 

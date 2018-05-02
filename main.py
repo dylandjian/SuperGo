@@ -33,7 +33,7 @@ def main(folder, version):
 
         ## Comment one line or the other to get the stack trace
         ## Must add a loooooong timer otherwise signals are not caught
-        self_play_proc.get(60000000)
+        # self_play_proc.get(60000000)
         train_proc.get(60000000)
 
     except KeyboardInterrupt:

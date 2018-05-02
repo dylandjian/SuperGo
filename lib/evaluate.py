@@ -11,7 +11,7 @@ def evaluate(player, new_player):
     black_wins = 0
     white_wins = 0
     for result in results:
-        if result[0] == 0:
+        if result[0] == 1:
             white_wins += 1
         else:
             black_wins += 1

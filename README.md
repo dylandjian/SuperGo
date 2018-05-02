@@ -64,14 +64,14 @@ Ongoing project.
 
 # Statistics
 
-## For a 10 layers deep Resnet evaluated on 5 games
+## For a 10 layers deep Resnet evaluated on 50 games 64 simulations
 
 ### 9x9 board
 
-* 0.1947162s / move - 0.003894324s / simulation with 2 threads and 2 batch_size_eval with 50 simulations
-* 0.1360865s / move - 0.00272173s / simulation 4 threads 4 batch_size_eval 50 simulations
-* 0.1222489s / move - 0.002444978s / simulation 8 threads 8 batch_size_eval 50 simulations
-* 0.1372498 / move - 0.00214452812s / simulations 16 threads 16 batch_size_eval 64 simulations
+* 0.2377991s / move - 0.00371561093s / simulation 2 threads 2 batch_size_eval
+* 0.1624937s / move - 0.00253896406s / simulation 4 threads 4 batch_size_eval
+* 0.1465123s / move - 0.00228925468s / simulation 8 threads 8 batch_size_eval
+* 0.1401098s / move - 0.00218921563s / simulation 16 threads 16 batch_size_eval
 
 ### 19x19 board
 

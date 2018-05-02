@@ -153,7 +153,7 @@ class GameManager(multiprocessing.Process):
                 self.game_queue.task_done()
                 self.result_queue.put(answer)
             except Exception as e:
-                print("xd")
+                print("Game has thrown an error")
 
 
 
@@ -195,8 +195,6 @@ class Game:
         """ Select a move without MCTS """
 
         player_move = None
-        valid_move = False
-        can_pass = False
         legal_moves = board.get_legal_moves()
 
         while player_move not in legal_moves and len(legal_moves) > 0:
@@ -208,7 +206,6 @@ class Game:
 
         return player_move
 
-    # @profile
     def _play(self, state, player, other_pass, competitive=False):
         """ Choose a move depending on MCTS or not """
 
@@ -286,7 +283,7 @@ class Game:
             
         ## Pickle the result because multiprocessing
         if self.opponent:
-            print("[EVALUATION] Match %d done in eval" % self.id)
+            print("[EVALUATION] Match %d done in eval, winner %s" % (self.id, "black" if reward == 0 else "white"))
             self.opponent.passed = False
             return pickle.dumps([reward])
 

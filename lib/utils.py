@@ -15,7 +15,7 @@ def _prepare_state(state):
     """
 
     x = torch.from_numpy(np.array([state]))
-    x = Variable(x).type(DTYPE_FLOAT)
+    x = torch.tensor(x, dtype=torch.float, device=DEVICE)
     return x
 
 

@@ -129,11 +129,8 @@ class Engine:
     def send(self, message):
         message_id, command, arguments = parse_message(message)
         if command in self.known_commands:
-            # try:
             return format_success(
                 message_id, getattr(self, "cmd_" + command)(arguments))
-            # except ValueError as exception:
-            #     return format_error(message_id, exception.args[0])
         else:
             return format_error(message_id, "unknown command")
 

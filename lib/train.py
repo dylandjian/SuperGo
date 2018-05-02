@@ -29,6 +29,7 @@ class AlphaLoss(torch.nn.Module):
     def forward(self, winner, self_play_winner, probas, self_play_probas):
         value_error = F.mse_loss(winner, self_play_winner)
         policy_error = F.kl_div(probas, self_play_probas)
+        # policy_error = torch.sum(-probas * torch.log(self_play_probas))
         return value_error + policy_error
 
 
@@ -104,9 +105,9 @@ def collate_fn(example):
         state.extend(ex[0])
         probas.extend(ex[1])
         winner.extend(ex[2])
-    state = torch.tensor(state).type(DTYPE_FLOAT)
-    probas = torch.tensor(probas).type(DTYPE_FLOAT)
-    winner = torch.tensor(winner).type(DTYPE_FLOAT)
+    state = torch.tensor(state, dtype=torch.float, device=DEVICE)
+    probas = torch.tensor(probas, dtype=torch.float, device=DEVICE)
+    winner = torch.tensor(winner, dtype=torch.float, device=DEVICE)
     return state, probas, winner
 
 
@@ -151,7 +152,7 @@ def train(current_time, loaded_version):
         total_ite = checkpoint['total_ite']
         lr = checkpoint['lr']
         version = checkpoint['version']
-        last_id = collection.find().count() - 120
+        last_id = collection.find().count() - (MOVES // MOVE_LIMIT) * 2 
     else:
         player = Player()
         optimizer = create_optimizer(player, lr)
@@ -209,9 +210,9 @@ def train(current_time, loaded_version):
                     pool.terminate()
             
             example = {
-                'state': Variable(state).type(DTYPE_FLOAT),
-                'winner': Variable(winner).type(DTYPE_FLOAT),
-                'move' : Variable(move).type(DTYPE_FLOAT)
+                'state': state,
+                'winner': winner,
+                'move' : move
             }
             loss = train_epoch(player, optimizer, example, criterion)
             running_loss.append(loss)
