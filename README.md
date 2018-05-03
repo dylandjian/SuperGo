@@ -17,8 +17,7 @@ Ongoing project.
   * Improving the multithreading of the search
 * Do something about the process leaking
 * Clean code, create install script, write documentation
-* Brainlag on loss : cross entropy or KLDiv (crossentropy - entropy) ??
-* Loss doesn't decrease :( still trying to see if it learns something on 9x9 with 50 simulations !
+* Currently training on 9x9 64 simulations 10 layers ResNet on my computer, didn't seem to have learnt a lot after 2800~ games, 375k training epochs and 55 improvements ( = trained network replacing the current best network) due to the duration of the evaluation process : 2 games at a time (only have 8 cores on my computer, 1 for self-play, 1 for training, 3 for self-play games, 1 for evaluation, 2 for evaluations games) which takes approximately 45s / game so 6 to 7 minutes per evaluation.
 
 # DONE
 
