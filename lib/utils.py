@@ -4,8 +4,6 @@ import random
 import torch
 from models.agent import Player
 from const import *
-from torch.autograd import Variable
-
 
 
 def _prepare_state(state):
@@ -84,6 +82,8 @@ def get_player(current_time, version):
 def sample_rotation(state, num=8):
     """ Apply a certain number of random transformation to the input state """
 
+    ## Create the dihedral group of a square with all the operations needed
+    ## in order to get the specific transformation
     dh_group = [(None, None), ((np.rot90, 1), None), ((np.rot90, 2), None),
                 ((np.rot90, 3), None), (np.fliplr, None), (np.flipud, None),
                 (np.flipud,  (np.rot90, 1)), (np.fliplr, (np.rot90, 1))]
@@ -91,7 +91,7 @@ def sample_rotation(state, num=8):
     random.shuffle(dh_group)
 
     states = []
-    boards = (HISTORY + 1) * 2
+    boards = (HISTORY + 1) * 2 ## Number of planes to rotate
     for idx in range(num):
         new_state = np.zeros((boards + 1, GOBAN_SIZE, GOBAN_SIZE,))
         new_state[:boards] = state[:boards]

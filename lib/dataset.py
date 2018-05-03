@@ -1,8 +1,9 @@
-from torch.utils.data import Dataset, DataLoader
-from const import *
 import numpy as np
 import timeit
+from torch.utils.data import Dataset, DataLoader
+from const import *
 from . import utils
+
 
 class SelfPlayDataset(Dataset):
     """
@@ -47,8 +48,3 @@ class SelfPlayDataset(Dataset):
         winners[np.where(winners != -1)] = 1
         self.winners[:number_moves] = winners
         return number_moves
-    
-    
-    def update_batch(self, raw_dataset):
-        for game in raw_dataset:
-            self.update(game)

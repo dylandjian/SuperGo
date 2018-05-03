@@ -8,15 +8,9 @@ from const import *
 class Player:
 
     def __init__(self):
-        if CUDA:
-            self.extractor = Extractor(INPLANES, OUTPLANES_MAP).cuda()
-            self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES).cuda()
-            self.policy_net = PolicyNet(OUTPLANES_MAP, OUTPLANES).cuda()
-        else:
-            self.extractor = Extractor(INPLANES, OUTPLANES_MAP)
-            self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES)
-            self.policy_net = PolicyNet(OUTPLANES_MAP, OUTPLANES)    
-        
+        self.extractor = Extractor(INPLANES, OUTPLANES_MAP).to(DEVICE)
+        self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES).to(DEVICE)
+        self.policy_net = PolicyNet(OUTPLANES_MAP, OUTPLANES).to(DEVICE)    
         self.passed = False
     
 

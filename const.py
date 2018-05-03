@@ -8,7 +8,7 @@ CUDA = torch.cuda.is_available()
 ## Dtype of the tensors depending on CUDA
 DEVICE = torch.device("cuda") if CUDA else torch.device("cpu")
 ## Number of self-play parallel games
-PARALLEL_SELF_PLAY = 3
+PARALLEL_SELF_PLAY = 2
 ## Number of evaluation parallel games 
 PARALLEL_EVAL = 2
 ## MCTS parallel
@@ -43,6 +43,9 @@ ALPHA = 0.03
 BATCH_SIZE_EVAL = 4
 ## Number of self-play before training
 SELF_PLAY_MATCH = 2 * PARALLEL_SELF_PLAY
+## Number of moves before changing temperature to stop
+## exploration
+TEMPERATURE_MOVE = 5 
 
 
 ##### TRAINING

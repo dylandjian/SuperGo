@@ -8,7 +8,46 @@ from const import *
 from lib.utils import _prepare_state, sample_rotation
 
 
+@jit
+def _opt_select(nodes, c_puct):
+    """ Optimized version of the selection """
+
+    total_count = 0
+    for i in range(nodes.shape[0]):
+        total_count += nodes[i][1]
+    
+    action_scores = np.zeros(nodes.shape[0])
+    for i in range(nodes.shape[0]):
+        action_scores[i] = nodes[i][0] + c_puct * nodes[i][2] * \
+                (np.sqrt(total_count) / (1 + nodes[i][1]))
+    
+    equals = np.where(action_scores == np.max(action_scores))[0]
+    if equals.shape[0] > 0:
+        return np.random.choice(equals)
+    return equals[0]
+
+
+def dirichlet_noise(probas):
+    """ Add Dirichlet noise in the root node """
+
+    dim = (probas.shape[0],)
+    new_probas = (1 - EPS) * probas + \
+                    EPS * np.random.dirichlet(np.full(dim, ALPHA))
+    return new_probas
+
+
+def _select(nodes, c_puct=C_PUCT):
+    """
+    Select the move that maximises the mean value of the next state +
+    the result of the PUCT function
+    """
+
+    return nodes[_opt_select(np.array([[node.q, node.n, node.p] \
+                    for node in nodes]), c_puct)]
+
+
 class Node:
+
     def __init__(self, parent=None, proba=None, move=None):
         """
         p : probability of reaching that node, given by the policy net
@@ -16,6 +55,7 @@ class Node:
         w : total action value, given by the value network
         q : mean action value (w / n)
         """
+
         self.p = proba
         self.n = 0
         self.w = 0
@@ -43,44 +83,9 @@ class Node:
                     for idx in range(probas.shape[0]) if probas[idx] > 0]
 
 
-def dirichlet_noise(probas):
-    """ Add Dirichlet noise in the root node """
-
-    dim = (probas.shape[0],)
-    new_probas = (1 - EPS) * probas + \
-                    EPS * np.random.dirichlet(np.full(dim, ALPHA))
-    return new_probas
-
-
-def _select(nodes, c_puct=C_PUCT):
-    """
-    Select the move that maximises the mean value of the next state +
-    the result of the PUCT function
-    """
-
-    return nodes[_opt_select(np.array([[node.q, node.n, node.p] \
-                    for node in nodes]), c_puct)]
-
-@jit
-def _opt_select(nodes, c_puct):
-    """ Optimized version of the selection """
-
-    total_count = 0
-    for i in range(nodes.shape[0]):
-        total_count += nodes[i][1]
-    
-    action_scores = np.zeros(nodes.shape[0])
-    for i in range(nodes.shape[0]):
-        action_scores[i] = nodes[i][0] + c_puct * nodes[i][2] * \
-                (np.sqrt(total_count) / (1 + nodes[i][1]))
-    
-    equals = np.where(action_scores == np.max(action_scores))[0]
-    if equals.shape[0] > 0:
-        return np.random.choice(equals)
-    return equals[0]
-
 
 class EvaluatorThread(threading.Thread):
+
     def __init__(self, player, eval_queue, condition_search, condition_eval):
         threading.Thread.__init__(self)
         self.eval_queue = eval_queue
@@ -119,6 +124,7 @@ class EvaluatorThread(threading.Thread):
 
 
 class SearchThread(threading.Thread):
+
     def __init__(self, mcts, game, eval_queue, thread_id, lock, condition_search, condition_eval):
         threading.Thread.__init__(self)
         self.eval_queue = eval_queue
