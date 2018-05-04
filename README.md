@@ -12,6 +12,7 @@ Ongoing project.
 
 # CURRENTLY DOING
 
+* Weird bug somewhere in the code, stuck on a certain level of improvements
 * Optimizations
 * MCTS
   * Improving the multithreading of the search by making it work when the BATCH_SIZE_EVAL is > than the number of threads used during the MCTS
