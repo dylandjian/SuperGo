@@ -79,6 +79,8 @@ class Node:
 
 
     def expand(self, probas):
+        """ Create a child node for every non-zero move probability """
+
         self.childrens = [Node(parent=self, move=idx, proba=probas[idx]) \
                     for idx in range(probas.shape[0]) if probas[idx] > 0]
 
@@ -96,6 +98,8 @@ class EvaluatorThread(threading.Thread):
     def run(self):
         total_sim = MCTS_SIM
         while total_sim > 0:
+
+            ## Wait for the eval_queue to be filled by new positions to evaluate
             self.condition_search.acquire()
             while (len(self.eval_queue.values()) != BATCH_SIZE_EVAL or \
                   (len(self.eval_queue.values()) < BATCH_SIZE_EVAL and \
@@ -103,22 +107,27 @@ class EvaluatorThread(threading.Thread):
                   (len(self.eval_queue.values()) == BATCH_SIZE_EVAL and \
                   not all(isinstance(state, np.ndarray) for state in self.eval_queue.values())):
                 self.condition_search.wait()
-
             self.condition_search.release()
+
+            ## Prepare the states by sampling a random dihedral rotation of the board
             self.condition_eval.acquire()
             states = []
             for idx, state in self.eval_queue.items():
                 states.append(sample_rotation(state, num=1))
+
+            ## Predict the feature_maps, policy and value
             states = _prepare_state(states)
             feature_maps = self.player.extractor(states[0])
-
-            ## Policy and value prediction
             probas = self.player.policy_net(feature_maps)
             v = self.player.value_net(feature_maps)
+
+            ## Replace the state with the result in the eval_queue
+            ## and notify all the threads that the result are available
             for idx in range(BATCH_SIZE_EVAL):
                 self.eval_queue[idx] = (probas[idx].cpu().data.numpy(), v[idx])
             self.condition_eval.notifyAll()
             self.condition_eval.release()
+
             total_sim -= BATCH_SIZE_EVAL
 
 
@@ -142,26 +151,32 @@ class SearchThread(threading.Thread):
         current_node = self.mcts.root
         done = False
 
+        ## Traverse the tree until leaf
         while not current_node.is_leaf() and not done:
             current_node = _select(current_node.childrens)
+
+            ## Virtual loss since multithreading
             self.lock.acquire()
             current_node.n += 1
             self.lock.release()
+
             state, _, done = game.step(current_node.move)
 
-        ## Predict the probas
         if not done:
+
+            ## Add current leaf state to the evaluation queue
             self.condition_search.acquire()
             self.eval_queue[self.thread_id] = state
             self.condition_search.notify()
-
             self.condition_search.release()
+
+            ## Wait for the evaluator to be done
             self.condition_eval.acquire()
             self.condition_eval.wait()
 
-            res = self.eval_queue[self.thread_id]
-            probas = np.array(res[0])
-            v = float(res[1])
+            result = self.eval_queue[self.thread_id]
+            probas = np.array(result[0])
+            v = float(result[1])
             self.condition_eval.release()
 
 
@@ -170,6 +185,7 @@ class SearchThread(threading.Thread):
                 probas = dirichlet_noise(probas)
             
             ## Modify probability vector depending on valid moves
+            ## and normalize after that
             valid_moves = game.get_legal_moves()
             illegal_moves = np.setdiff1d(np.arange(game.board_size ** 2 + 1),
                                         np.array(valid_moves))
@@ -177,6 +193,7 @@ class SearchThread(threading.Thread):
             total = np.sum(probas)
             probas /= total
 
+            ## Create the child nodes for the current leaf
             self.lock.acquire()
             current_node.expand(probas)
 
@@ -226,12 +243,17 @@ class MCTS:
 
     def search(self, current_game, player, competitive=False):
         threads = []
+
+        ## Locking for thread synchronization
         condition_eval = threading.Condition()
         condition_search = threading.Condition()
         lock = threading.Lock()
+
+        ## Single thread for the evaluator (for now)
         eval_queue = {}
         evaluator = EvaluatorThread(player, eval_queue, condition_search, condition_eval)
         evaluator.start()
+
         for sim in range(MCTS_SIM // MCTS_PARALLEL):
             eval_queue.clear()
             for idx in range(MCTS_PARALLEL):
@@ -242,16 +264,20 @@ class MCTS:
                 thread.join()
         evaluator.join()
 
+        ## Create the visit count vector
         action_scores = np.zeros((current_game.board_size ** 2 + 1,))
         for node in self.root.childrens:
             action_scores[node.move] = node.n
+
+        ## Pick the best move
         final_move, final_probas = self._draw_move(action_scores, competitive=competitive)
 
+        ## Advance the root to keep the statistics of the childrens
         for idx in range(len(self.root.childrens)):
             if self.root.childrens[idx].move == final_move:
                 break
-
         self.root = self.root.childrens[idx]
+
         return final_probas, final_move
 
 
