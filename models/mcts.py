@@ -146,6 +146,8 @@ class SearchThread(threading.Thread):
     
 
     def run(self):
+        """ Run a single simulation """
+
         game = deepcopy(self.game)
         state = game.state
         current_node = self.mcts.root
@@ -174,11 +176,11 @@ class SearchThread(threading.Thread):
             self.condition_eval.acquire()
             self.condition_eval.wait()
 
+            ## Copy the result to avoid GPU memory leak
             result = self.eval_queue[self.thread_id]
             probas = np.array(result[0])
             v = float(result[1])
             self.condition_eval.release()
-
 
             ## Add noise in the root node
             if not current_node.parent:
