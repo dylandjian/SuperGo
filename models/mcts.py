@@ -87,13 +87,15 @@ class Node:
 
 
 class EvaluatorThread(threading.Thread):
-
     def __init__(self, player, eval_queue, condition_search, condition_eval):
+        """ Used to be able to batch evaluate positions during tree search """
+
         threading.Thread.__init__(self)
         self.eval_queue = eval_queue
         self.player = player
         self.condition_search = condition_search
         self.condition_eval = condition_eval
+
 
     def run(self):
         total_sim = MCTS_SIM
@@ -117,9 +119,7 @@ class EvaluatorThread(threading.Thread):
 
             ## Predict the feature_maps, policy and value
             states = _prepare_state(states)
-            feature_maps = self.player.extractor(states[0])
-            probas = self.player.policy_net(feature_maps)
-            v = self.player.value_net(feature_maps)
+            v, probas = self.player.predict(states[0])
 
             ## Replace the state with the result in the eval_queue
             ## and notify all the threads that the result are available
@@ -135,6 +135,8 @@ class EvaluatorThread(threading.Thread):
 class SearchThread(threading.Thread):
 
     def __init__(self, mcts, game, eval_queue, thread_id, lock, condition_search, condition_eval):
+        """ Run a single simulation """
+
         threading.Thread.__init__(self)
         self.eval_queue = eval_queue
         self.mcts = mcts
@@ -146,8 +148,6 @@ class SearchThread(threading.Thread):
     
 
     def run(self):
-        """ Run a single simulation """
-
         game = deepcopy(self.game)
         state = game.state
         current_node = self.mcts.root
@@ -208,7 +208,6 @@ class SearchThread(threading.Thread):
 
 
 class MCTS:
-
     def __init__(self):
         self.root = Node()
 
@@ -244,6 +243,10 @@ class MCTS:
 
 
     def search(self, current_game, player, competitive=False):
+        """
+        Search the best moves through the game tree with
+        the policy and value network to update node statistics
+        """
         threads = []
 
         ## Locking for thread synchronization
@@ -256,6 +259,7 @@ class MCTS:
         evaluator = EvaluatorThread(player, eval_queue, condition_search, condition_eval)
         evaluator.start()
 
+        ## Do exactly the required number of simulation per thread
         for sim in range(MCTS_SIM // MCTS_PARALLEL):
             eval_queue.clear()
             for idx in range(MCTS_PARALLEL):

@@ -14,6 +14,7 @@ class PolicyNet(nn.Module):
         self.outplanes = outplanes
         self.conv = nn.Conv2d(inplanes, 1, kernel_size=1)
         self.bn = nn.BatchNorm2d(1)
+        self.logsoftmax = nn.LogSoftmax(dim=1)
         self.fc = nn.Linear(outplanes - 1, outplanes)
         
 
@@ -28,5 +29,6 @@ class PolicyNet(nn.Module):
         x = F.relu(self.bn(self.conv(x)))
         x = x.view(-1, self.outplanes - 1)
         x = self.fc(x)
-        probas = F.softmax(x, dim=1)
+        probas = self.logsoftmax(x).exp()
+
         return probas

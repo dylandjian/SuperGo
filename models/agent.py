@@ -6,13 +6,23 @@ from const import *
 
 
 class Player:
-
     def __init__(self):
+        """ Create an agent and initialize the networks """
+
         self.extractor = Extractor(INPLANES, OUTPLANES_MAP).to(DEVICE)
         self.value_net = ValueNet(OUTPLANES_MAP, OUTPLANES).to(DEVICE)
         self.policy_net = PolicyNet(OUTPLANES_MAP, OUTPLANES).to(DEVICE)    
         self.passed = False
     
+
+    def predict(self, state):
+        """ Predict the probabilities and the winner from a given state """
+
+        feature_maps = self.extractor(state)
+        winner = self.value_net(feature_maps)
+        probas = self.policy_net(feature_maps)
+        return winner, probas
+
 
     def save_models(self, state, current_time):
         """ Save the models """

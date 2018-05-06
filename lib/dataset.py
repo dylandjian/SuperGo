@@ -42,9 +42,12 @@ class SelfPlayDataset(Dataset):
         self.plays = np.roll(self.plays, number_moves, axis=0)
         self.plays[:number_moves] = np.vstack(dataset[:,1])
 
+        ## Replace the player color with the end game result
+        players = dataset[:,2]
+        players[np.where(players - 1 != game[1])] = -1
+        players[np.where(players != -1)] = 1
+
         self.winners = np.roll(self.winners, number_moves, axis=0)
-        winners = dataset[:,2]
-        winners[np.where(winners - 1 != game[1])] = -1
-        winners[np.where(winners != -1)] = 1
-        self.winners[:number_moves] = winners
+        self.winners[:number_moves] = players
+
         return number_moves

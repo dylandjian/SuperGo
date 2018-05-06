@@ -10,9 +10,9 @@ DEVICE = torch.device("cuda") if CUDA else torch.device("cpu")
 ## Number of self-play parallel games
 PARALLEL_SELF_PLAY = 2
 ## Number of evaluation parallel games 
-PARALLEL_EVAL = 2
+PARALLEL_EVAL = 3
 ## MCTS parallel
-MCTS_PARALLEL = 4
+MCTS_PARALLEL = 8
 
 
 ##### GLOBAL
@@ -21,12 +21,14 @@ MCTS_PARALLEL = 4
 GOBAN_SIZE = 9
 ## Number of move to end a game
 MOVE_LIMIT = GOBAN_SIZE ** 2 * 2.5
+## Maximum ratio that can be replaced in the rotation buffer
+MAX_REPLACEMENT = 0.4
 ## Number of last states to keep
 HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 64
+MCTS_SIM = 120
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
@@ -40,9 +42,9 @@ EPS = 0.25
 ## Alpha for Dirichlet noise
 ALPHA = 0.03
 ## Batch size for evaluation during MCTS
-BATCH_SIZE_EVAL = 4
+BATCH_SIZE_EVAL = 8
 ## Number of self-play before training
-SELF_PLAY_MATCH = 2 * PARALLEL_SELF_PLAY
+SELF_PLAY_MATCH = PARALLEL_SELF_PLAY
 ## Number of moves before changing temperature to stop
 ## exploration
 TEMPERATURE_MOVE = 5 

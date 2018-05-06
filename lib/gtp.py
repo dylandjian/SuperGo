@@ -3,14 +3,10 @@ import string
 
 
 def pre_engine(s):
+    """ Clean the message sent to the engine """
+
     s = re.sub("[^\t\n -~]", "", s)
     s = s.split("#")[0]
-    s = s.replace("\t", " ")
-    return s
-
-
-def pre_controller(s):
-    s = re.sub("[^\t\n -~]", "", s)
     s = s.replace("\t", " ")
     return s
 
@@ -24,7 +20,6 @@ def gtp_list(l):
 
 
 def gtp_color(color):
-    # an arbitrary choice amongst a number of possibilities
     return { BLACK: "B", WHITE: "W" }[color]
 
 

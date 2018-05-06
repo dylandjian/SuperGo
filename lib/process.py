@@ -12,8 +12,10 @@ class NoDaemonProcess(multiprocessing.Process):
     daemon = property(_get_daemon, _set_daemon)
 
 
+
 class MyPool(multiprocessing.pool.Pool):
     Process = NoDaemonProcess
+
 
 
 class GameManager(multiprocessing.Process):
@@ -48,6 +50,7 @@ class GameManager(multiprocessing.Process):
                 print("Game has thrown an error")
 
 
+
 def create_matches(player, opponent=None, cores=1, match_number=10):
     """ Create the process queue """
 
@@ -63,8 +66,8 @@ def create_matches(player, opponent=None, cores=1, match_number=10):
     for game_manager in game_managers:
         game_manager.start()
 
-    for id in range(match_number):
-        queue.put(Game(player, id, opponent=opponent))
+    for game_id in range(match_number):
+        queue.put(Game(player, game_id, opponent=opponent))
     
     for _ in range(cores):
         queue.put(None)

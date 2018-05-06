@@ -20,6 +20,7 @@ class BasicBlock(nn.Module):
                      padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
 
+
     def forward(self, x):
         residual = x
 
@@ -36,14 +37,14 @@ class BasicBlock(nn.Module):
 
 
 class Extractor(nn.Module):
-
     """
     This network is used as a feature extractor, takes as input the 'state' defined in
     the AlphaGo Zero paper
     - The state of the past n turns of the board (7 in the paper) for each player.
       This means that the first n matrices of the input state will be 1 and 0, where 1
       is a stone. 
-      This is done to take into consideration Go rules (repetitions are forbidden)
+      This is done to take into consideration Go rules (repetitions are forbidden) and
+      give a sense of time
 
     - The color of the stone that is next to play. This could have been a single bit, but
       for implementation purposes, it is actually expended to the whole matrix size.
@@ -67,10 +68,11 @@ class Extractor(nn.Module):
             setattr(self, "res{}".format(block), \
                 BasicBlock(outplanes, outplanes))
     
+
     def forward(self, x):
         """
         x : tensor representing the state
-        feature_maps : result of the residual layers
+        feature_maps : result of the residual layers forward pass
         """
 
         x = F.relu(self.bn1(self.conv1(x)))

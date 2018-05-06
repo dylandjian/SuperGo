@@ -73,8 +73,8 @@ class Game:
             
         else:
             feature_maps = player.extractor(state)
-            probas = player.policy_net(feature_maps)[0] \
-                                .cpu().data.numpy()
+            _, probas = player.predict(state)
+            probas = probas[0].cpu().data.numpy()
             if player.passed is True:
                 action = self.goban_size ** 2
             else:
@@ -104,11 +104,17 @@ class Game:
         comp = False
 
         while not done:
-            ## Prevent cycling in 2 atari situations
+
+            ## Prevent game from cycling
             if moves > MOVE_LIMIT:
-                return pickle.dumps((dataset, self.board.get_winner()))
+                reward = self.board.get_winner()
+                if self.opponent:
+                    print("[EVALUATION] Match %d done in eval after max move, winner %s"
+                        % (self.id, "black" if reward == 0 else "white"))
+                    return pickle.dumps([reward])
+                return pickle.dumps((dataset, reward)) 
             
-            ## Magic ratio for adaptative temperature
+            ## Adaptative temperature to stop exploration
             if moves > TEMPERATURE_MOVE:
                 comp = True
 
@@ -134,10 +140,8 @@ class Game:
         ## Pickle the result because multiprocessing
         if self.opponent:
             print("[EVALUATION] Match %d done in eval, winner %s" % (self.id, "black" if reward == 0 else "white"))
-            self.opponent.passed = False
             return pickle.dumps([reward])
 
-        self.player.passed = False
         return pickle.dumps((dataset, reward))
 
     

@@ -66,7 +66,6 @@ class GoEnv():
         self.player_color = colormap[player_color]
 
         self.komi = self._get_komi(board_size)
-        # Filled in by _reset() at the beginning
         self.state = _format_state(self.history,
                         self.player_color, self.board_size)
         self.done = True
@@ -146,11 +145,13 @@ class GoEnv():
 
 
     def get_winner(self):
-        score = self.board.fast_score + self.komi
+        """ Get the winner, using the Tromp Taylor scoring + the komi """
 
+        score = self.board.fast_score + self.komi
         white_wins = self.board.fast_score > 0
         black_wins = self.board.fast_score < 0
         reward = 1 if white_wins else 0
+
         return reward
     
 

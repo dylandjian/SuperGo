@@ -21,16 +21,26 @@ from models.agent import Player
 
 
 class AlphaLoss(torch.nn.Module):
-    """ Custom loss as defined in the paper """
+    """
+    Custom loss as defined in the paper :
+    (z - v) ** 2 --> MSE Loss
+    (-pi * logp) --> Cross Entropy Loss
+    z : self_play_winner
+    v : winner
+    pi : self_play_probas
+    p : probas
+    
+    The loss is then averaged over the entire batch
+    """
 
     def __init__(self):
         super(AlphaLoss, self).__init__()
 
     def forward(self, winner, self_play_winner, probas, self_play_probas):
-        value_error = F.mse_loss(winner, self_play_winner)
-        policy_error = F.kl_div(probas, self_play_probas)
-        # policy_error = torch.sum(-probas * torch.log(self_play_probas))
-        return value_error + policy_error
+        value_error = (self_play_winner - winner) ** 2
+        policy_error = torch.sum((-self_play_probas * (1e-6 + probas).log()), 1)
+        total_error = (value_error.view(-1) + policy_error).mean()
+        return total_error
 
 
 def fetch_new_games(collection, dataset, last_id, loaded_version=None):
@@ -48,7 +58,7 @@ def fetch_new_games(collection, dataset, last_id, loaded_version=None):
         added_games += 1
 
         ## You cant replace more than 40% of the dataset at a time
-        if added_moves >= MOVES * 0.4 and not loaded_version:
+        if added_moves >= MOVES * MAX_REPLACEMENT and not loaded_version:
             break
     
     print("[TRAIN] Last id: %d, added games: %d, added moves: %d"\
@@ -60,12 +70,10 @@ def train_epoch(player, optimizer, example, criterion):
     """ Used to train the 3 models over a single batch """
 
     optimizer.zero_grad()
-    feature_maps = player.extractor(example['state'])
-    winner = player.value_net(feature_maps)
-    probas = player.policy_net(feature_maps)
+    winner, probas = player.predict(example['state'])
 
     loss = criterion(winner, example['winner'], \
-                        probas, example['move'])
+                     probas, example['move'])
     loss.backward()
     optimizer.step()
 
@@ -82,10 +90,13 @@ def update_lr(lr, optimizer, total_ite, lr_decay=LR_DECAY, lr_decay_ite=LR_DECAY
     lr = lr * lr_decay
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
     return lr, optimizer
 
 
 def create_state(current_version, lr, total_ite, optimizer):
+    """ Create a checkpoint to be saved """
+
     state = {
         'version': current_version,
         'lr': lr,
@@ -101,10 +112,12 @@ def collate_fn(example):
     state = []
     probas = []
     winner = []
+
     for ex in example:
         state.extend(ex[0])
         probas.extend(ex[1])
         winner.extend(ex[2])
+
     state = torch.tensor(state, dtype=torch.float, device=DEVICE)
     probas = torch.tensor(probas, dtype=torch.float, device=DEVICE)
     winner = torch.tensor(winner, dtype=torch.float, device=DEVICE)
@@ -145,7 +158,7 @@ def train(current_time, loaded_version):
     client = MongoClient()
     collection = client.superGo[current_time]
 
-    ## First player
+    ## First player either from disk or fresh
     if loaded_version:
         player, checkpoint = load_player(current_time, loaded_version) 
         optimizer = create_optimizer(player, lr, param=checkpoint['optimizer'])
@@ -183,7 +196,7 @@ def train(current_time, loaded_version):
     print("[TRAIN] Circular buffer full !")
     print("[TRAIN] Starting to train !")
     dataloader = DataLoader(dataset, collate_fn=collate_fn, \
-                batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+                batch_size=BATCH_SIZE, shuffle=True)
 
     while True:
         batch_loss = []
