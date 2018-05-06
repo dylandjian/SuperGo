@@ -2,6 +2,7 @@ import numpy as np
 import threading
 import time
 import random
+from collections import OrderedDict
 from numba import jit
 from copy import deepcopy
 from const import *
@@ -87,58 +88,58 @@ class Node:
 
 
 class EvaluatorThread(threading.Thread):
-    def __init__(self, player, eval_queue, condition_search, condition_eval):
+    def __init__(self, player, eval_queue, result_queue, condition_search, condition_eval):
         """ Used to be able to batch evaluate positions during tree search """
 
         threading.Thread.__init__(self)
         self.eval_queue = eval_queue
+        self.result_queue = result_queue
         self.player = player
         self.condition_search = condition_search
         self.condition_eval = condition_eval
 
 
     def run(self):
-        total_sim = MCTS_SIM
-        while total_sim > 0:
+        states = OrderedDict()
+        for sim in range(MCTS_SIM // BATCH_SIZE_EVAL):
 
             ## Wait for the eval_queue to be filled by new positions to evaluate
             self.condition_search.acquire()
-            while (len(self.eval_queue.values()) != BATCH_SIZE_EVAL or \
-                  (len(self.eval_queue.values()) < BATCH_SIZE_EVAL and \
-                   len(self.eval_queue.values()) != total_sim)) or \
-                  (len(self.eval_queue.values()) == BATCH_SIZE_EVAL and \
-                  not all(isinstance(state, np.ndarray) for state in self.eval_queue.values())):
-                self.condition_search.wait()
+            states.clear()
+            while len(states.keys()) < BATCH_SIZE_EVAL:
+                if sim < MCTS_SIM // (BATCH_SIZE_EVAL + 1):
+                    self.condition_search.wait()
+                # print('items', self.eval_queue.keys())
+                for idx, state in self.eval_queue.items():
+                    if len(states.keys()) < BATCH_SIZE_EVAL and isinstance(state, np.ndarray):
+                        states[idx] = sample_rotation(state, num=1)
             self.condition_search.release()
+            # print('treating', states.keys())
 
-            ## Prepare the states by sampling a random dihedral rotation of the board
             self.condition_eval.acquire()
-            states = []
-            for idx, state in self.eval_queue.items():
-                states.append(sample_rotation(state, num=1))
-
             ## Predict the feature_maps, policy and value
-            states = _prepare_state(states)
-            v, probas = self.player.predict(states[0])
+            v, probas = self.player.predict(_prepare_state(
+                            list(states.values()))[0])
 
             ## Replace the state with the result in the eval_queue
             ## and notify all the threads that the result are available
-            for idx in range(BATCH_SIZE_EVAL):
-                self.eval_queue[idx] = (probas[idx].cpu().data.numpy(), v[idx])
-            self.condition_eval.notifyAll()
-            self.condition_eval.release()
+            for idx, i in zip(states.keys(), range(BATCH_SIZE_EVAL)):
+                del self.eval_queue[idx]
+                self.result_queue[idx] = (probas[i].cpu().data.numpy(), v[i])
 
-            total_sim -= BATCH_SIZE_EVAL
+            self.condition_eval.notify(n=BATCH_SIZE_EVAL)
+            self.condition_eval.release()
 
 
 
 class SearchThread(threading.Thread):
 
-    def __init__(self, mcts, game, eval_queue, thread_id, lock, condition_search, condition_eval):
+    def __init__(self, mcts, game, eval_queue, result_queue, thread_id, lock, condition_search, condition_eval):
         """ Run a single simulation """
 
         threading.Thread.__init__(self)
         self.eval_queue = eval_queue
+        self.result_queue = result_queue
         self.mcts = mcts
         self.game = game
         self.lock = lock
@@ -148,62 +149,64 @@ class SearchThread(threading.Thread):
     
 
     def run(self):
-        game = deepcopy(self.game)
-        state = game.state
-        current_node = self.mcts.root
-        done = False
+        for sim in range(MCTS_SIM // MCTS_PARALLEL):
+            game = deepcopy(self.game)
+            state = game.state
+            current_node = self.mcts.root
+            done = False
 
-        ## Traverse the tree until leaf
-        while not current_node.is_leaf() and not done:
-            current_node = _select(current_node.childrens)
+            ## Traverse the tree until leaf
+            while not current_node.is_leaf() and not done:
+                current_node = _select(current_node.childrens)
 
-            ## Virtual loss since multithreading
-            self.lock.acquire()
-            current_node.n += 1
-            self.lock.release()
+                ## Virtual loss since multithreading
+                self.lock.acquire()
+                current_node.n += 1
+                self.lock.release()
 
-            state, _, done = game.step(current_node.move)
+                state, _, done = game.step(current_node.move)
 
-        if not done:
+            if not done:
 
-            ## Add current leaf state to the evaluation queue
-            self.condition_search.acquire()
-            self.eval_queue[self.thread_id] = state
-            self.condition_search.notify()
-            self.condition_search.release()
+                ## Add current leaf state to the evaluation queue
+                self.condition_search.acquire()
+                self.eval_queue[self.thread_id] = state
+                self.condition_search.notify()
+                self.condition_search.release()
 
-            ## Wait for the evaluator to be done
-            self.condition_eval.acquire()
-            self.condition_eval.wait()
+                ## Wait for the evaluator to be done
+                self.condition_eval.acquire()
+                while self.thread_id not in self.result_queue.keys():
+                    self.condition_eval.wait()
 
-            ## Copy the result to avoid GPU memory leak
-            result = self.eval_queue[self.thread_id]
-            probas = np.array(result[0])
-            v = float(result[1])
-            self.condition_eval.release()
+                ## Copy the result to avoid GPU memory leak
+                result = self.result_queue.pop(self.thread_id)
+                probas = np.array(result[0])
+                v = float(result[1])
+                self.condition_eval.release()
 
-            ## Add noise in the root node
-            if not current_node.parent:
-                probas = dirichlet_noise(probas)
-            
-            ## Modify probability vector depending on valid moves
-            ## and normalize after that
-            valid_moves = game.get_legal_moves()
-            illegal_moves = np.setdiff1d(np.arange(game.board_size ** 2 + 1),
-                                        np.array(valid_moves))
-            probas[illegal_moves] = 0
-            total = np.sum(probas)
-            probas /= total
+                ## Add noise in the root node
+                if not current_node.parent:
+                    probas = dirichlet_noise(probas)
+                
+                ## Modify probability vector depending on valid moves
+                ## and normalize after that
+                valid_moves = game.get_legal_moves()
+                illegal_moves = np.setdiff1d(np.arange(game.board_size ** 2 + 1),
+                                            np.array(valid_moves))
+                probas[illegal_moves] = 0
+                total = np.sum(probas)
+                probas /= total
 
-            ## Create the child nodes for the current leaf
-            self.lock.acquire()
-            current_node.expand(probas)
+                ## Create the child nodes for the current leaf
+                self.lock.acquire()
+                current_node.expand(probas)
 
-            ## Backpropagate the result of the simulation
-            while current_node.parent:
-                current_node.update(v)
-                current_node = current_node.parent
-            self.lock.release()
+                ## Backpropagate the result of the simulation
+                while current_node.parent:
+                    current_node.update(v)
+                    current_node = current_node.parent
+                self.lock.release()
 
 
 
@@ -255,19 +258,18 @@ class MCTS:
         lock = threading.Lock()
 
         ## Single thread for the evaluator (for now)
-        eval_queue = {}
-        evaluator = EvaluatorThread(player, eval_queue, condition_search, condition_eval)
+        eval_queue = OrderedDict()
+        result_queue = {}
+        evaluator = EvaluatorThread(player, eval_queue, result_queue, condition_search, condition_eval)
         evaluator.start()
 
         ## Do exactly the required number of simulation per thread
-        for sim in range(MCTS_SIM // MCTS_PARALLEL):
-            eval_queue.clear()
-            for idx in range(MCTS_PARALLEL):
-                threads.append(SearchThread(self, current_game, eval_queue, idx, 
-                                        lock, condition_search, condition_eval))
-                threads[-1].start()
-            for thread in threads:
-                thread.join()
+        for idx in range(MCTS_PARALLEL):
+            threads.append(SearchThread(self, current_game, eval_queue, result_queue, idx, 
+                                    lock, condition_search, condition_eval))
+            threads[-1].start()
+        for thread in threads:
+            thread.join()
         evaluator.join()
 
         ## Create the visit count vector
@@ -284,6 +286,7 @@ class MCTS:
                 break
         self.root = self.root.childrens[idx]
 
+        print(final_move)
         return final_probas, final_move
 
 

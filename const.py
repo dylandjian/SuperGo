@@ -12,7 +12,7 @@ PARALLEL_SELF_PLAY = 2
 ## Number of evaluation parallel games 
 PARALLEL_EVAL = 3
 ## MCTS parallel
-MCTS_PARALLEL = 8
+MCTS_PARALLEL = 4
 
 
 ##### GLOBAL
@@ -28,7 +28,7 @@ HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 120
+MCTS_SIM = 8
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
@@ -42,7 +42,7 @@ EPS = 0.25
 ## Alpha for Dirichlet noise
 ALPHA = 0.03
 ## Batch size for evaluation during MCTS
-BATCH_SIZE_EVAL = 8
+BATCH_SIZE_EVAL = 2
 ## Number of self-play before training
 SELF_PLAY_MATCH = PARALLEL_SELF_PLAY
 ## Number of moves before changing temperature to stop

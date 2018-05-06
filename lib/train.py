@@ -232,9 +232,9 @@ def train(current_time, loaded_version):
 
             ## Print running loss
             if total_ite % LOSS_TICK == 0:
-                batch_loss.append(np.mean(running_loss))
                 print("[TRAIN] current iteration: %d, averaged loss: %.3f"\
                         % (total_ite, np.mean(running_loss)))
+                batch_loss.append(np.mean(running_loss))
                 running_loss = []
             
             ## Fetch new games
@@ -244,5 +244,5 @@ def train(current_time, loaded_version):
             total_ite += 1
     
         if len(batch_loss) > 0:
-            print("[TRAIN] Batch loss : %.3f, current lr: %f" % (np.mean(batch_loss), lr))
+            print("[TRAIN] Average forward pass loss : %.3f, current lr: %f" % (np.mean(batch_loss), lr))
     
