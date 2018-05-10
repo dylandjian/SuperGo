@@ -6,9 +6,9 @@ Ongoing project.
 
 # TODO (in order of priority)
 
+* Do something about the process leaking
 * File of constants that match the paper constants ?
 * OGS / KGS API ?
-* Do something about the process leaking
 * Use logging instead of prints ?
 
 # CURRENTLY DOING

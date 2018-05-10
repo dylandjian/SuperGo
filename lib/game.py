@@ -1,4 +1,5 @@
 import numpy as np
+import timeit
 import pickle
 from const import *
 from models.mcts import MCTS
@@ -97,6 +98,7 @@ class Game:
         training dataset
         """
 
+        start_time = timeit.default_timer()
         done = False
         state = self.board.reset()
         dataset = []
@@ -109,9 +111,8 @@ class Game:
             if moves > MOVE_LIMIT:
                 reward = self.board.get_winner()
                 if self.opponent:
-                    print("[EVALUATION] Match %d done in eval after max move, winner %s"
-                        % (self.id, "black" if reward == 0 else "white"))
-                    return pickle.dumps([reward])
+                    final_time = timeit.default_timer() - start_time
+                    return pickle.dumps([reward, moves, final_time])
                 return pickle.dumps((dataset, reward)) 
             
             ## Adaptative temperature to stop exploration
@@ -139,9 +140,8 @@ class Game:
             
         ## Pickle the result because multiprocessing
         if self.opponent:
-            print("[EVALUATION] Match %d done in eval after %d moves, winner %s" % (self.id,
-                        moves, "black" if reward == 0 else "white"))
-            return pickle.dumps([reward])
+            final_time = timeit.default_timer() - start_time
+            return pickle.dumps([reward, moves, final_time])
 
         return pickle.dumps((dataset, reward))
 

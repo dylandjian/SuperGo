@@ -8,11 +8,11 @@ CUDA = torch.cuda.is_available()
 ## Dtype of the tensors depending on CUDA
 DEVICE = torch.device("cuda") if CUDA else torch.device("cpu")
 ## Number of self-play parallel games
-PARALLEL_SELF_PLAY = 2
+PARALLEL_SELF_PLAY = 6
 ## Number of evaluation parallel games 
 PARALLEL_EVAL = 3
 ## MCTS parallel
-MCTS_PARALLEL = 4
+MCTS_PARALLEL = 6
 
 
 ##### GLOBAL
@@ -28,7 +28,7 @@ HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 128
+MCTS_SIM = 32
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
@@ -42,7 +42,7 @@ EPS = 0.25
 ## Alpha for Dirichlet noise
 ALPHA = 0.03
 ## Batch size for evaluation during MCTS
-BATCH_SIZE_EVAL = 4
+BATCH_SIZE_EVAL = 2
 ## Number of self-play before training
 SELF_PLAY_MATCH = PARALLEL_SELF_PLAY
 ## Number of moves before changing temperature to stop
