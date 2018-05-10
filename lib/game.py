@@ -102,8 +102,12 @@ class Game:
         done = False
         state = self.board.reset()
         dataset = []
+        move_times = []
         moves = 0
         comp = False
+        
+        # if self.id % 10 == 0:
+        print("Starting game number %d" % self.id)
 
         while not done:
 
@@ -112,7 +116,7 @@ class Game:
                 reward = self.board.get_winner()
                 if self.opponent:
                     final_time = timeit.default_timer() - start_time
-                    return pickle.dumps([reward, moves, final_time])
+                    return pickle.dumps([reward, moves, move_times, final_time])
                 return pickle.dumps((dataset, reward)) 
             
             ## Adaptative temperature to stop exploration
@@ -121,10 +125,17 @@ class Game:
 
             ## For evaluation
             if self.opponent:
+                play_time = timeit.default_timer()
                 state, reward, done, _, action = self._play(_prepare_state(state), \
                                                 self.player, self.opponent.passed, competitive=True)
+                final_play_time = timeit.default_timer() - play_time
+                move_times.append(final_play_time)
+
+                play_time = timeit.default_timer()
                 state, reward, done, _, action = self._play(_prepare_state(state), \
                                                 self.opponent, self.player.passed, competitive=True)
+                final_play_time = timeit.default_timer() - play_time
+                move_times.append(final_play_time)
                 moves += 2
 
             ## For self-play
@@ -141,7 +152,7 @@ class Game:
         ## Pickle the result because multiprocessing
         if self.opponent:
             final_time = timeit.default_timer() - start_time
-            return pickle.dumps([reward, moves, final_time])
+            return pickle.dumps([reward, moves, move_times, final_time])
 
         return pickle.dumps((dataset, reward))
 

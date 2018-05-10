@@ -9,11 +9,7 @@ from const import PARALLEL_SELF_PLAY, MCTS_PARALLEL, MCTS_SIM, BATCH_SIZE_EVAL
 from subprocess import call
 
 
-MCTS_PARALLELS = [2, 4, 6, 8, 16]
-MCTS_SIMS = [32, 64, 128, 160]
-BATCH_SIZE_EVALS = [2, 4, 6, 8]
-SAMPLE_NUM = 30
-
+SAMPLE_NUM = 50
 
 def overwrite_file(old_values, new_values):
     for idx, new_value in new_values.items():
@@ -29,6 +25,8 @@ def do_sims(player, old_values, mcts_parallel=2, mcts_sim=8, batch_size_eval=2):
         "BATCH_SIZE_EVAL": batch_size_eval
     }
     overwrite_file(old_values, new_values)
+    print("-- STARTING FOR %d GAMES WITH MCTS PARALLEL %d SIMS %d BATCH_SIZE %d --"\
+            % (SAMPLE_NUM, mcts_parallel, mcts_sim, batch_size_eval))
     queue, results = create_matches(player, cores=PARALLEL_SELF_PLAY, 
                     opponent=player, match_number=SAMPLE_NUM)
     moves = []
@@ -38,19 +36,18 @@ def do_sims(player, old_values, mcts_parallel=2, mcts_sim=8, batch_size_eval=2):
         for _ in range(SAMPLE_NUM):
             result = pickle.loads(results.get())
             moves.append(result[1])
-            times.append(result[2])
+            move_times = result[2]
+            times.append(result[3])
     finally:
         queue.close()
         results.close()
-    
-    print("-- FINAL RESULTS FOR %d GAMES WITH MCTS PARALLEL %d SIMS %d BATCH_SIZE %d --"\
-            % (SAMPLE_NUM, mcts_parallel, mcts_sim, batch_size_eval))
-    print("total game duration: %d seconds, total game move count: %d" \
-                % (sum(times) / PARALLEL_SELF_PLAY, sum(moves)))
+    print("-- RESULTS --")
+    print("real total game duration: %.3f seconds, total game move count: %d" \
+                % (sum(times), sum(moves)))
     print("average game duration: %.5f seconds, average game move count: %.1f" \
                 % (np.mean(times), np.mean(moves)))
     print("average move duration: %.5f seconds, average sim duration: %.8f seconds" \
-            % (sum(times) / sum(moves),  sum(times) / (sum(moves) * mcts_sim)))
+            % (np.mean(move_times),  np.mean(move_times) / mcts_sim))
     print("-- DONE --\n")
     return new_values
 
@@ -58,30 +55,35 @@ def do_sims(player, old_values, mcts_parallel=2, mcts_sim=8, batch_size_eval=2):
 def stats_report():
     multiprocessing.set_start_method("spawn")
     player = Player()
-    old_values = {
+    first_values = {
         "MCTS_PARALLEL": MCTS_PARALLEL,
         "MCTS_SIM": MCTS_SIM,
         "BATCH_SIZE_EVAL": BATCH_SIZE_EVAL
     }
 
-    old_values = do_sims(player, old_values, mcts_parallel=2, mcts_sim=32, batch_size_eval=2)
-    old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=32, batch_size_eval=2)
-    old_values = do_sims(player, old_values, mcts_parallel=6, mcts_sim=32, batch_size_eval=2)
-    old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=32, batch_size_eval=2)
-    old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=32, batch_size_eval=2)
-    old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=32, batch_size_eval=4)
-    old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=32, batch_size_eval=4)
-    old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=32, batch_size_eval=6)
+    ## 64 simulations
+    old_values = do_sims(player, first_values, mcts_parallel=2, mcts_sim=64, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=64, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=6, mcts_sim=64, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=64, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=64, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=64, batch_size_eval=4)
+    old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=64, batch_size_eval=4)
+    old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=64, batch_size_eval=6)
     
-    old_values = do_sims(player, old_values, mcts_parallel=2, mcts_sim=128, batch_size_eval=2)
+
+    ## 128 simulations
+    old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=128, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=128, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=6, mcts_sim=128, batch_size_eval=2)
-    old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=128, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=128, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=128, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=128, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=128, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=128, batch_size_eval=6)
     
+
+    ## 160 simulations
     old_values = do_sims(player, old_values, mcts_parallel=2, mcts_sim=160, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=160, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=6, mcts_sim=160, batch_size_eval=2)
@@ -91,7 +93,6 @@ def stats_report():
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=160, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=160, batch_size_eval=6)
 
-    
 
 
 if __name__ == "__main__":
