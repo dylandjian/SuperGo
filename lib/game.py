@@ -139,7 +139,8 @@ class Game:
             
         ## Pickle the result because multiprocessing
         if self.opponent:
-            print("[EVALUATION] Match %d done in eval, winner %s" % (self.id, "black" if reward == 0 else "white"))
+            print("[EVALUATION] Match %d done in eval after %d moves, winner %s" % (self.id,
+                        moves, "black" if reward == 0 else "white"))
             return pickle.dumps([reward])
 
         return pickle.dumps((dataset, reward))

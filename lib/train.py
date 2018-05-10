@@ -244,5 +244,5 @@ def train(current_time, loaded_version):
             total_ite += 1
     
         if len(batch_loss) > 0:
-            print("[TRAIN] Average forward pass loss : %.3f, current lr: %f" % (np.mean(batch_loss), lr))
+            print("[TRAIN] Average backward pass loss : %.3f, current lr: %f" % (np.mean(batch_loss), lr))
     

@@ -28,7 +28,7 @@ HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 8
+MCTS_SIM = 128
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization
@@ -42,7 +42,7 @@ EPS = 0.25
 ## Alpha for Dirichlet noise
 ALPHA = 0.03
 ## Batch size for evaluation during MCTS
-BATCH_SIZE_EVAL = 2
+BATCH_SIZE_EVAL = 4
 ## Number of self-play before training
 SELF_PLAY_MATCH = PARALLEL_SELF_PLAY
 ## Number of moves before changing temperature to stop

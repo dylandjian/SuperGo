@@ -100,34 +100,27 @@ class EvaluatorThread(threading.Thread):
 
 
     def run(self):
-        states = OrderedDict()
         for sim in range(MCTS_SIM // BATCH_SIZE_EVAL):
 
             ## Wait for the eval_queue to be filled by new positions to evaluate
             self.condition_search.acquire()
-            states.clear()
-            while len(states.keys()) < BATCH_SIZE_EVAL:
-                if sim < MCTS_SIM // (BATCH_SIZE_EVAL + 1):
-                    self.condition_search.wait()
-                # print('items', self.eval_queue.keys())
-                for idx, state in self.eval_queue.items():
-                    if len(states.keys()) < BATCH_SIZE_EVAL and isinstance(state, np.ndarray):
-                        states[idx] = sample_rotation(state, num=1)
+            while len(self.eval_queue) < BATCH_SIZE_EVAL:
+                self.condition_search.wait()
             self.condition_search.release()
-            # print('treating', states.keys())
 
             self.condition_eval.acquire()
             ## Predict the feature_maps, policy and value
-            v, probas = self.player.predict(_prepare_state(
-                            list(states.values()))[0])
+            states = torch.tensor(np.array(list(self.eval_queue.values()))[0:BATCH_SIZE_EVAL],
+                                 dtype=torch.float, device=DEVICE)
+            v, probas = self.player.predict(states)
 
             ## Replace the state with the result in the eval_queue
             ## and notify all the threads that the result are available
-            for idx, i in zip(states.keys(), range(BATCH_SIZE_EVAL)):
+            for idx, i in zip(list(self.eval_queue.keys()), range(BATCH_SIZE_EVAL)):
                 del self.eval_queue[idx]
                 self.result_queue[idx] = (probas[i].cpu().data.numpy(), v[i])
 
-            self.condition_eval.notify(n=BATCH_SIZE_EVAL)
+            self.condition_eval.notifyAll()
             self.condition_eval.release()
 
 
@@ -149,64 +142,63 @@ class SearchThread(threading.Thread):
     
 
     def run(self):
-        for sim in range(MCTS_SIM // MCTS_PARALLEL):
-            game = deepcopy(self.game)
-            state = game.state
-            current_node = self.mcts.root
-            done = False
+        game = deepcopy(self.game)
+        state = game.state
+        current_node = self.mcts.root
+        done = False
 
-            ## Traverse the tree until leaf
-            while not current_node.is_leaf() and not done:
-                current_node = _select(current_node.childrens)
+        ## Traverse the tree until leaf
+        while not current_node.is_leaf() and not done:
+            current_node = _select(current_node.childrens)
 
-                ## Virtual loss since multithreading
-                self.lock.acquire()
-                current_node.n += 1
-                self.lock.release()
+            ## Virtual loss since multithreading
+            self.lock.acquire()
+            current_node.n += 1
+            self.lock.release()
 
-                state, _, done = game.step(current_node.move)
+            state, _, done = game.step(current_node.move)
 
-            if not done:
+        if not done:
 
-                ## Add current leaf state to the evaluation queue
-                self.condition_search.acquire()
-                self.eval_queue[self.thread_id] = state
-                self.condition_search.notify()
-                self.condition_search.release()
+            ## Add current leaf state to the evaluation queue
+            self.condition_search.acquire()
+            self.eval_queue[self.thread_id] = sample_rotation(state, num=1)
+            self.condition_search.notify()
+            self.condition_search.release()
 
-                ## Wait for the evaluator to be done
-                self.condition_eval.acquire()
-                while self.thread_id not in self.result_queue.keys():
-                    self.condition_eval.wait()
+            ## Wait for the evaluator to be done
+            self.condition_eval.acquire()
+            while self.thread_id not in self.result_queue.keys():
+                self.condition_eval.wait()
 
-                ## Copy the result to avoid GPU memory leak
-                result = self.result_queue.pop(self.thread_id)
-                probas = np.array(result[0])
-                v = float(result[1])
-                self.condition_eval.release()
+            ## Copy the result to avoid GPU memory leak
+            result = self.result_queue.pop(self.thread_id)
+            probas = np.array(result[0])
+            v = float(result[1])
+            self.condition_eval.release()
 
-                ## Add noise in the root node
-                if not current_node.parent:
-                    probas = dirichlet_noise(probas)
-                
-                ## Modify probability vector depending on valid moves
-                ## and normalize after that
-                valid_moves = game.get_legal_moves()
-                illegal_moves = np.setdiff1d(np.arange(game.board_size ** 2 + 1),
-                                            np.array(valid_moves))
-                probas[illegal_moves] = 0
-                total = np.sum(probas)
-                probas /= total
+            ## Add noise in the root node
+            if not current_node.parent:
+                probas = dirichlet_noise(probas)
+            
+            ## Modify probability vector depending on valid moves
+            ## and normalize after that
+            valid_moves = game.get_legal_moves()
+            illegal_moves = np.setdiff1d(np.arange(game.board_size ** 2 + 1),
+                                        np.array(valid_moves))
+            probas[illegal_moves] = 0
+            total = np.sum(probas)
+            probas /= total
 
-                ## Create the child nodes for the current leaf
-                self.lock.acquire()
-                current_node.expand(probas)
+            ## Create the child nodes for the current leaf
+            self.lock.acquire()
+            current_node.expand(probas)
 
-                ## Backpropagate the result of the simulation
-                while current_node.parent:
-                    current_node.update(v)
-                    current_node = current_node.parent
-                self.lock.release()
+            ## Backpropagate the result of the simulation
+            while current_node.parent:
+                current_node.update(v)
+                current_node = current_node.parent
+            self.lock.release()
 
 
 
@@ -264,12 +256,13 @@ class MCTS:
         evaluator.start()
 
         ## Do exactly the required number of simulation per thread
-        for idx in range(MCTS_PARALLEL):
-            threads.append(SearchThread(self, current_game, eval_queue, result_queue, idx, 
-                                    lock, condition_search, condition_eval))
-            threads[-1].start()
-        for thread in threads:
-            thread.join()
+        for sim in range(MCTS_SIM // MCTS_PARALLEL):
+            for idx in range(MCTS_PARALLEL):
+                threads.append(SearchThread(self, current_game, eval_queue, result_queue, idx, 
+                                        lock, condition_search, condition_eval))
+                threads[-1].start()
+            for thread in threads:
+                thread.join()
         evaluator.join()
 
         ## Create the visit count vector
@@ -286,7 +279,6 @@ class MCTS:
                 break
         self.root = self.root.childrens[idx]
 
-        print(final_move)
         return final_probas, final_move
 
 

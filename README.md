@@ -15,7 +15,7 @@ Ongoing project.
 * Weird bug somewhere in the code, stuck on a certain level of improvements
 * Optimizations
 * MCTS
-  * Improving the multithreading of the search by making it work when the BATCH_SIZE_EVAL is > than the number of threads used during the MCTS
+  * Improving the multithreading of the search by making it work when the BATCH_SIZE_EVAL is lower than the number of threads used during the MCTS
 * Do something about the process leaking
 * Clean code, create install script, write documentation
 * Currently training on 9x9 64 simulations 10 layers ResNet on my computer, didn't seem to have learnt a lot after 4000~ games, 45k training epochs and 75 improvements ( = trained network replacing the current best network) due to the duration of the evaluation process : 2 games at a time (only have 8 cores on my computer, 1 for self-play, 1 for training, 3 for self-play games, 1 for evaluation, 2 for evaluations games) which takes approximately 30s / game so 6 to 7 minutes per evaluation.
