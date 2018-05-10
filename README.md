@@ -13,13 +13,13 @@ Ongoing project.
 
 # CURRENTLY DOING
 
-* Statistics (branch statistics)
 * Optimizations
 * Clean code, create install script, write documentation
 * Trying to see if it learns something on my computer
 
 # DONE
 
+* Statistics (branch statistics)
 * Game that are longer than the threshold of moves are now used
 * MCTS
   * Tree search
@@ -65,14 +65,9 @@ Ongoing project.
 
 ### 9x9 board
 
-* 0.2377991s / move - 0.00371561093s / simulation 2 threads 2 batch_size_eval
-* 0.1624937s / move - 0.00253896406s / simulation 4 threads 4 batch_size_eval
-* 0.1465123s / move - 0.00228925468s / simulation 8 threads 8 batch_size_eval
-* 0.1401098s / move - 0.00218921563s / simulation 16 threads 16 batch_size_eval
+soon
 
 ### 19x19 board
-
-* 0.6306054s / move - 0.012612108s / simulation with 2 threads and 2 batch_size_eval with 50 simulations
 
 # Differences with the official paper
 
