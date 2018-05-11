@@ -67,17 +67,20 @@ def stats_report():
     old_values = do_sims(player, old_values, mcts_parallel=6, mcts_sim=64, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=64, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=64, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=64, batch_size_eval=4)
+    old_values = do_sims(player, old_values, mcts_parallel=6, mcts_sim=64, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=64, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=64, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=64, batch_size_eval=6)
     
 
     ## 128 simulations
-    old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=128, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=2, mcts_sim=128, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=128, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=6, mcts_sim=128, batch_size_eval=2)
     old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=128, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=128, batch_size_eval=2)
+    old_values = do_sims(player, old_values, mcts_parallel=4, mcts_sim=128, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=8, mcts_sim=128, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=128, batch_size_eval=4)
     old_values = do_sims(player, old_values, mcts_parallel=12, mcts_sim=128, batch_size_eval=6)

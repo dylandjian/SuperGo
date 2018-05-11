@@ -110,8 +110,11 @@ class GoEnv():
 
 
     def test_move(self, action):
-        """ Test if a specific valid action should be played,
-            depending on the current score """
+        """
+        Test if a specific valid action should be played,
+        depending on the current score. This is used to stop
+        the agent from passing if it makes him loose
+        """
 
         board_clone = self.board.clone()
         current_score = board_clone.fast_score  + self.komi
@@ -167,7 +170,6 @@ class GoEnv():
 
         # Reward: if nonterminal, then the reward is -1
         if not self.board.is_terminal:
-            self.done = False
             return _format_state(self.history, self.player_color, self.board_size), \
                     -1, False
 

@@ -12,7 +12,7 @@ PARALLEL_SELF_PLAY = 2
 ## Number of evaluation parallel games 
 PARALLEL_EVAL = 3
 ## MCTS parallel
-MCTS_PARALLEL = 12
+MCTS_PARALLEL = 4
 
 
 ##### GLOBAL
@@ -28,7 +28,7 @@ HISTORY = 7
 ## Learning rate
 LR = 0.01
 ## Number of MCTS simulation
-MCTS_SIM = 128
+MCTS_SIM = 64
 ## Exploration constant
 C_PUCT = 0.2
 ## L2 Regularization

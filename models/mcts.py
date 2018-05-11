@@ -11,8 +11,8 @@ from lib.utils import _prepare_state, sample_rotation
 
 
 @jit
-def _opt_select(nodes, c_puct):
-    """ Optimized version of the selection """
+def _opt_select(nodes, c_puct=C_PUCT):
+    """ Optimized version of the selection based of the PUCT formula """
 
     total_count = 0
     for i in range(nodes.shape[0]):
@@ -36,16 +36,6 @@ def dirichlet_noise(probas):
     new_probas = (1 - EPS) * probas + \
                     EPS * np.random.dirichlet(np.full(dim, ALPHA))
     return new_probas
-
-
-def _select(nodes, c_puct=C_PUCT):
-    """
-    Select the move that maximises the mean value of the next state +
-    the result of the PUCT function
-    """
-
-    return nodes[_opt_select(np.array([[node.q, node.n, node.p] \
-                    for node in nodes]), c_puct)]
 
 
 class Node:
@@ -105,19 +95,23 @@ class EvaluatorThread(threading.Thread):
 
             ## Wait for the eval_queue to be filled by new positions to evaluate
             self.condition_search.acquire()
-            while len(self.eval_queue) < BATCH_SIZE_EVAL:
+            while len(self.eval_queue) < BATCH_SIZE_EVAL and \
+                  len(self.eval_queue) != MCTS_PARALLEL - BATCH_SIZE_EVAL or \
+                  len(self.eval_queue) == 0:
                 self.condition_search.wait()
             self.condition_search.release()
 
             self.condition_eval.acquire()
+            keys = list(self.eval_queue.keys())
+
             ## Predict the feature_maps, policy and value
-            states = torch.tensor(np.array(list(self.eval_queue.values()))[0:BATCH_SIZE_EVAL],
-                                 dtype=torch.float, device=DEVICE)
+            states = torch.tensor(np.array(list(self.eval_queue.values()))[0:len(keys)],
+                        dtype=torch.float, device=DEVICE)
             v, probas = self.player.predict(states)
 
             ## Replace the state with the result in the eval_queue
             ## and notify all the threads that the result are available
-            for idx, i in zip(list(self.eval_queue.keys()), range(BATCH_SIZE_EVAL)):
+            for idx, i in zip(keys, range(len(keys))):
                 del self.eval_queue[idx]
                 self.result_queue[idx] = (probas[i].cpu().data.numpy(), v[i])
 
@@ -150,7 +144,10 @@ class SearchThread(threading.Thread):
 
         ## Traverse the tree until leaf
         while not current_node.is_leaf() and not done:
-            current_node = _select(current_node.childrens)
+            ## Select the action that maximizes the PUCT algorithm
+            current_node = current_node.childrens[_opt_select( \
+                    np.array([[node.q, node.n, node.p] \
+                    for node in current_node.childrens]))]
 
             ## Virtual loss since multithreading
             self.lock.acquire()
@@ -161,7 +158,8 @@ class SearchThread(threading.Thread):
 
         if not done:
 
-            ## Add current leaf state to the evaluation queue
+            ## Add current leaf state with random dihedral transformation
+            ## to the evaluation queue
             self.condition_search.acquire()
             self.eval_queue[self.thread_id] = sample_rotation(state, num=1)
             self.condition_search.notify()
@@ -243,7 +241,6 @@ class MCTS:
         Search the best moves through the game tree with
         the policy and value network to update node statistics
         """
-        threads = []
 
         ## Locking for thread synchronization
         condition_eval = threading.Condition()
@@ -256,6 +253,7 @@ class MCTS:
         evaluator = EvaluatorThread(player, eval_queue, result_queue, condition_search, condition_eval)
         evaluator.start()
 
+        threads = []
         ## Do exactly the required number of simulation per thread
         for sim in range(MCTS_SIM // MCTS_PARALLEL):
             for idx in range(MCTS_PARALLEL):
