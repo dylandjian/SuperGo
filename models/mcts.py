@@ -95,23 +95,24 @@ class EvaluatorThread(threading.Thread):
 
             ## Wait for the eval_queue to be filled by new positions to evaluate
             self.condition_search.acquire()
-            while len(self.eval_queue) < BATCH_SIZE_EVAL and \
-                  len(self.eval_queue) != MCTS_PARALLEL - BATCH_SIZE_EVAL or \
-                  len(self.eval_queue) == 0:
+            while len(self.eval_queue) < BATCH_SIZE_EVAL or \
+                  sim == MCTS_PARALLEL // BATCH_SIZE_EVAL - 1 and \
+                  len(self.eval_queue) != MCTS_PARALLEL - BATCH_SIZE_EVAL:
                 self.condition_search.wait()
             self.condition_search.release()
 
             self.condition_eval.acquire()
             keys = list(self.eval_queue.keys())
+            max_len = BATCH_SIZE_EVAL if len(keys) > BATCH_SIZE_EVAL else len(keys)
 
             ## Predict the feature_maps, policy and value
-            states = torch.tensor(np.array(list(self.eval_queue.values()))[0:len(keys)],
+            states = torch.tensor(np.array(list(self.eval_queue.values()))[0:max_len],
                         dtype=torch.float, device=DEVICE)
             v, probas = self.player.predict(states)
 
             ## Replace the state with the result in the eval_queue
             ## and notify all the threads that the result are available
-            for idx, i in zip(keys, range(len(keys))):
+            for idx, i in zip(keys, range(max_len)):
                 del self.eval_queue[idx]
                 self.result_queue[idx] = (probas[i].cpu().data.numpy(), v[i])
 
