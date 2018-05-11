@@ -6,9 +6,9 @@ Ongoing project.
 
 # TODO (in order of priority)
 
+* Do something about the process leaking
 * File of constants that match the paper constants ?
 * OGS / KGS API ?
-* Do something about the process leaking
 * Use logging instead of prints ?
 
 # CURRENTLY DOING
@@ -59,9 +59,9 @@ Ongoing project.
 * [Monte Carlo tree search explaination](https://int8.io/monte-carlo-tree-search-beginners-guide/)
 * [Nice tree search implementation](https://github.com/blanyal/alpha-zero/blob/master/mcts.py)
 
-# Statistics
+# Statistics, check branch stats
 
-## For a 10 layers deep Resnet evaluated on 50 games 64 simulations
+## For a 10 layers deep Resnet
 
 ### 9x9 board
 
