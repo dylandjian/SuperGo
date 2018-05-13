@@ -12,7 +12,7 @@ PARALLEL_SELF_PLAY = 2
 ## Number of evaluation parallel games 
 PARALLEL_EVAL = 3
 ## MCTS parallel
-MCTS_PARALLEL = 4
+MCTS_PARALLEL = 8
 
 
 ##### GLOBAL

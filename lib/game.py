@@ -106,8 +106,8 @@ class Game:
         moves = 0
         comp = False
         
-        if self.id % 10 == 0:
-            print("Starting game number %d" % self.id)
+        # if self.id % 10 == 0:
+        print("Starting game number %d" % self.id)
 
         while not done:
 
